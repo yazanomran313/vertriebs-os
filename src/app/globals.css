@@ -1,26 +1,46 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #111118;
+  --bg-card: #16161f;
+  --bg-hover: #1e1e2a;
+  --border: #2a2a3a;
+  --accent: #6366f1;
+  --accent-hover: #5557e8;
+  --text-primary: #f0f0ff;
+  --text-secondary: #8888aa;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track { background: var(--bg-secondary); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* Desktop: Sidebar sichtbar, Bottom Nav versteckt */
+.desktop-sidebar { display: flex; }
+.mobile-nav { display: none; }
+.main-content { padding: 32px !important; }
+
+/* Mobile: Sidebar versteckt, Bottom Nav sichtbar */
+@media (max-width: 768px) {
+  .desktop-sidebar { display: none !important; }
+  .mobile-nav { display: block; }
+  .main-content {
+    padding: 20px 16px 80px 16px !important;
+  }
 }
