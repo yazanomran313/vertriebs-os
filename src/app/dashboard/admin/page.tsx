@@ -30,8 +30,16 @@ export default function AdminPage() {
   const [keyMissing, setKeyMissing]     = useState(false)
   const [revoking, setRevoking]         = useState<string | null>(null)
   const [confirmRevoke, setConfirmRevoke] = useState<string | null>(null)
+  const [confirmReset, setConfirmReset] = useState(false)
+  const [resetting, setResetting]       = useState(false)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
-  useEffect(() => { loadAll() }, [])
+  useEffect(() => {
+    loadAll()
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) setCurrentUserId(data.user.id)
+    })
+  }, [])
 
   async function loadAll() {
     setLoading(true)
@@ -69,6 +77,19 @@ export default function AdminPage() {
       setResult({ error: json.error })
     }
     setSending(false)
+  }
+
+  async function deleteAllUsers() {
+    if (!currentUserId) return
+    setResetting(true)
+    setConfirmReset(false)
+    await fetch('/api/admin/invitations', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deleteAllExcept: currentUserId }),
+    })
+    setResetting(false)
+    await loadAll()
   }
 
   async function revokeInvite(invite: PendingInvite) {
@@ -161,6 +182,33 @@ export default function AdminPage() {
             {sending ? 'Sende…' : '✉️ Einladung senden'}
           </button>
         </form>
+      </div>
+
+      {/* Danger zone — delete all users except self */}
+      <div style={{ marginBottom: 24 }}>
+        {confirmReset ? (
+          <div style={{ backgroundColor: '#FF453A15', border: '1px solid #FF453A40', borderRadius: 14, padding: '16px 20px' }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: '#FF453A', marginBottom: 6 }}>⚠️ Wirklich alle anderen löschen?</div>
+            <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 14 }}>
+              Alle anderen Nutzer (inkl. ausstehende Einladungen) werden unwiderruflich gelöscht.
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={deleteAllUsers} disabled={resetting}
+                style={{ flex: 1, padding: '11px', fontSize: 14, fontWeight: 700, backgroundColor: '#FF453A', color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer' }}>
+                {resetting ? 'Lösche…' : 'Ja, alle löschen'}
+              </button>
+              <button onClick={() => setConfirmReset(false)}
+                style={{ flex: 1, padding: '11px', fontSize: 14, backgroundColor: 'var(--bg-hover)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: 10, cursor: 'pointer' }}>
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={() => setConfirmReset(true)} disabled={resetting}
+            style={{ width: '100%', padding: '12px', fontSize: 14, fontWeight: 600, backgroundColor: '#FF453A15', color: '#FF453A', border: '1px solid #FF453A30', borderRadius: 12, cursor: 'pointer' }}>
+            🗑 Alle außer mir löschen
+          </button>
+        )}
       </div>
 
       {/* Pending invites */}

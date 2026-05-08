@@ -17,7 +17,7 @@ export default function SetPasswordPage() {
     let cancelled = false
 
     async function init() {
-      // 1. Check if a session is already active (e.g. after server-side code exchange)
+      // 1. Check if a session is already active (server-side code exchange via /auth/callback)
       const { data: { session } } = await supabase.auth.getSession()
       if (session && !cancelled) {
         const name = session.user.user_metadata?.name as string | undefined
@@ -26,7 +26,7 @@ export default function SetPasswordPage() {
         return
       }
 
-      // 2. Handle token_hash in query params (Supabase OTP/invite flow)
+      // 2. Handle token_hash in query params (Supabase OTP/invite flow fallback)
       const params = new URLSearchParams(window.location.search)
       const token_hash = params.get('token_hash')
       const type = params.get('type') as 'invite' | 'recovery' | 'email' | null
@@ -37,14 +37,24 @@ export default function SetPasswordPage() {
           const name = data.session.user.user_metadata?.name as string | undefined
           if (name) setUserName(name)
           setSessionReady(true)
-          // Clean up URL
           window.history.replaceState({}, '', '/set-password')
           return
         }
+        // token_hash failed → show error immediately, no spinner
+        if (!cancelled) setSessionError(true)
+        return
       }
 
-      // 3. Listen for hash-based tokens (#access_token=... in URL)
-      //    createBrowserClient auto-detects and processes the hash on first auth call
+      // 3. Check if hash fragment has access_token (older Supabase flow)
+      const hasHashToken = window.location.hash.includes('access_token')
+
+      if (!hasHashToken) {
+        // No token anywhere → show error immediately
+        if (!cancelled) setSessionError(true)
+        return
+      }
+
+      // 4. Hash token present — Supabase client processes it automatically
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sess) => {
         if (sess && !cancelled) {
           const name = sess.user.user_metadata?.name as string | undefined
@@ -54,13 +64,13 @@ export default function SetPasswordPage() {
         }
       })
 
-      // 4. Timeout — if nothing fires in 8 seconds, show error
+      // Timeout — only wait if we actually have a hash token
       const timeout = setTimeout(() => {
         if (!cancelled) {
           subscription.unsubscribe()
           setSessionError(true)
         }
-      }, 8000)
+      }, 6000)
 
       return () => {
         clearTimeout(timeout)

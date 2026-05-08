@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
     data: { name: name || '' },
-    redirectTo: `${req.headers.get('origin') ?? 'https://command-center-pied-five.vercel.app'}/set-password`,
+    redirectTo: `${req.headers.get('origin') ?? 'https://command-center-pied-five.vercel.app'}/auth/callback?type=invite`,
   })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })

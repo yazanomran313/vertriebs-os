@@ -31,12 +31,28 @@ export async function GET() {
   return NextResponse.json({ pending })
 }
 
-// DELETE /api/admin/invitations — widerruft eine Einladung (löscht den Auth-User)
+// DELETE /api/admin/invitations — widerruft Einladung(en)
+// Body: { userId } → einzelnen User löschen
+// Body: { deleteAllExcept } → alle außer dieser User-ID löschen
 export async function DELETE(req: NextRequest) {
   const admin = adminClient()
   if (!admin) return NextResponse.json({ error: 'Service key fehlt.' }, { status: 500 })
 
-  const { userId } = await req.json() as { userId: string }
+  const body = await req.json() as { userId?: string; deleteAllExcept?: string }
+
+  if (body.deleteAllExcept) {
+    const { data, error: listErr } = await admin.auth.admin.listUsers({ perPage: 1000 })
+    if (listErr) return NextResponse.json({ error: listErr.message }, { status: 400 })
+    const others = (data.users ?? []).filter(u => u.id !== body.deleteAllExcept)
+    const errors: string[] = []
+    for (const u of others) {
+      const { error } = await admin.auth.admin.deleteUser(u.id)
+      if (error) errors.push(`${u.email}: ${error.message}`)
+    }
+    return NextResponse.json({ ok: true, deleted: others.length, errors })
+  }
+
+  const { userId } = body
   if (!userId) return NextResponse.json({ error: 'userId fehlt.' }, { status: 400 })
 
   const { error } = await admin.auth.admin.deleteUser(userId)
