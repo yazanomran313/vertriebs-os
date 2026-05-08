@@ -90,12 +90,22 @@ export default function SetPasswordPage() {
     setLoading(true)
     setError('')
 
+    // Grab email before updating so we can re-login with the new password
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    const userEmail = currentUser?.email
+
     const { error: updateError } = await supabase.auth.updateUser({ password })
 
     if (updateError) {
       setError(updateError.message)
       setLoading(false)
       return
+    }
+
+    // The invite-token session ends after updateUser — do a fresh sign-in
+    // so the middleware sees a proper standard session on the next request.
+    if (userEmail) {
+      await supabase.auth.signInWithPassword({ email: userEmail, password })
     }
 
     setDone(true)
