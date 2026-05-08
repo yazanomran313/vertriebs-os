@@ -1,293 +1,298 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Plus, Phone, MessageSquare, X, ChevronRight, Loader2, Upload } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import ContactImport from '@/components/ContactImport'
-
-type Stage = 'neu' | 'kontaktiert' | 'termin' | 'gehalten' | 'abschluss'
-type ContactType = 'kunde' | 'partner'
+import { VG_STAGES, RG_STAGES } from '@/lib/ergo'
+import { Phone, MessageSquare, ChevronRight } from 'lucide-react'
 
 interface Contact {
-  id: string
-  name: string
-  phone: string
-  source: string
-  type: ContactType
-  stage: Stage
-  notes: string
-  created_at: string
-  last_contact: string
+  id: string; name: string; phone: string | null
+  vg_stage: string | null; rg_stage: string | null
+  einheiten: number | null; last_contact: string | null; created_at: string
 }
+type PipelineTab = 'vg' | 'rg'
 
-const stages: { id: Stage; label: string; color: string }[] = [
-  { id: 'neu', label: 'Neu', color: '#6366f1' },
-  { id: 'kontaktiert', label: 'Kontaktiert', color: '#f59e0b' },
-  { id: 'termin', label: 'Termin vereinbart', color: '#06b6d4' },
-  { id: 'gehalten', label: 'Termin gehalten', color: '#22c55e' },
-  { id: 'abschluss', label: 'Abschluss', color: '#ec4899' },
-]
+function initials(name: string) {
+  return name.trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2)
+}
+function avatarColor(name: string) {
+  const colors = ['#6366f1', '#8b5cf6', '#06b6d4', '#30D158', '#FF9F0A', '#FF6B6B', '#4ECDC4']
+  let h = 0; for (const c of name) h = (h * 31 + c.charCodeAt(0)) % colors.length
+  return colors[h]
+}
+function daysAgo(dateStr: string | null, fallback: string) {
+  const d = Math.floor((Date.now() - new Date(dateStr || fallback).getTime()) / 86400000)
+  return d === 0 ? 'Heute' : d === 1 ? 'Gestern' : `vor ${d}T`
+}
 
 export default function PipelinePage() {
   const [contacts, setContacts] = useState<Contact[]>([])
-  const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [showImport, setShowImport] = useState(false)
+  const [loading, setLoading]   = useState(true)
+  const [tab, setTab]           = useState<PipelineTab>('vg')
+  const [activeStage, setActiveStage] = useState('kundenpotenzial')
   const [selected, setSelected] = useState<Contact | null>(null)
-  const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({
-    name: '',
-    phone: '',
-    source: 'Instagram',
-    type: 'kunde' as ContactType,
-    notes: '',
-  })
+  const [moving, setMoving]     = useState(false)
 
-  useEffect(() => {
-    loadContacts()
+  const load = useCallback(async () => {
+    const { data } = await supabase.from('contacts')
+      .select('id,name,phone,vg_stage,rg_stage,einheiten,last_contact,created_at')
+      .order('created_at', { ascending: false })
+    setContacts((data || []) as Contact[])
+    setLoading(false)
   }, [])
 
-  async function loadContacts() {
-    setLoading(true)
-    const { data } = await supabase.from('contacts').select('*').order('created_at', { ascending: false })
-    if (data) setContacts(data)
-    setLoading(false)
+  useEffect(() => { load() }, [load])
+
+  // Reset active stage when switching tab
+  useEffect(() => {
+    setActiveStage(tab === 'vg' ? 'kundenpotenzial' : 'partnerpotenzial')
+  }, [tab])
+
+  async function moveStage(contact: Contact, newStage: string) {
+    setMoving(true)
+    const field = tab === 'vg' ? 'vg_stage' : 'rg_stage'
+    await supabase.from('contacts')
+      .update({ [field]: newStage, last_contact: new Date().toISOString().split('T')[0] })
+      .eq('id', contact.id)
+    const updated = { ...contact, [field]: newStage }
+    setContacts(prev => prev.map(c => c.id === contact.id ? { ...c, [field]: newStage } : c))
+    setSelected(updated)
+    setMoving(false)
   }
 
-  async function addContact() {
-    if (!form.name.trim()) return
-    setSaving(true)
-    const { data, error } = await supabase.from('contacts').insert([{
-      name: form.name,
-      phone: form.phone,
-      source: form.source,
-      type: form.type,
-      stage: 'neu',
-      notes: form.notes,
-      last_contact: new Date().toISOString().split('T')[0],
-    }]).select().single()
+  const stages = tab === 'vg' ? VG_STAGES : RG_STAGES
+  const field  = tab === 'vg' ? 'vg_stage' : 'rg_stage'
+  const currentStage = stages.find(s => s.id === activeStage) || stages[0]
 
-    if (data && !error) {
-      setContacts([data, ...contacts])
-      setForm({ name: '', phone: '', source: 'Instagram', type: 'kunde', notes: '' })
-      setShowForm(false)
-    }
-    setSaving(false)
-  }
+  const vgActive = contacts.filter(c => c.vg_stage && c.vg_stage !== 'abgeschlossen').length
+  const vgAbg    = contacts.filter(c => c.vg_stage === 'abgeschlossen').length
+  const rgActive = contacts.filter(c => c.rg_stage && c.rg_stage !== 'im_team').length
+  const rgTeam   = contacts.filter(c => c.rg_stage === 'im_team').length
 
-  async function moveStage(id: string, stage: Stage) {
-    await supabase.from('contacts').update({ stage, last_contact: new Date().toISOString().split('T')[0] }).eq('id', id)
-    setContacts(contacts.map((c) => c.id === id ? { ...c, stage } : c))
-    if (selected?.id === id) setSelected((prev) => prev ? { ...prev, stage } : null)
-  }
+  const stageContacts = contacts.filter(c => c[field as keyof Contact] === activeStage)
 
-  async function deleteContact(id: string) {
-    await supabase.from('contacts').delete().eq('id', id)
-    setContacts(contacts.filter((c) => c.id !== id))
-    setSelected(null)
-  }
-
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, gap: 12, color: 'var(--text-secondary)' }}>
-        <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
-        <span>Lade Kontakte...</span>
-      </div>
-    )
-  }
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '70vh', color: 'var(--text-secondary)', fontSize: 14 }}>Lade…</div>
+  )
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Pipeline</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 4 }}>
-            {contacts.length} Kontakte gesamt
-          </p>
+    <div style={{ maxWidth: 600, margin: '0 auto', padding: '0 16px 100px' }}>
+
+      {/* Title */}
+      <div style={{ padding: '16px 0 20px' }}>
+        <h1 style={{ fontSize: 26, fontWeight: 800, margin: '0 0 16px', letterSpacing: '-0.5px' }}>Pipeline</h1>
+
+        {/* VG / RG Toggle */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+          {(['vg', 'rg'] as PipelineTab[]).map(t => (
+            <button key={t} onClick={() => setTab(t)} style={{
+              padding: '9px 20px', borderRadius: 22, fontSize: 14, fontWeight: 600,
+              border: 'none', cursor: 'pointer', transition: 'all 0.15s',
+              backgroundColor: tab === t ? '#6366f1' : 'var(--bg-card)',
+              color: tab === t ? '#fff' : 'var(--text-secondary)',
+            }}>
+              {t === 'vg' ? '📈 VG Verkauf' : '🤝 RG Rekrutierung'}
+            </button>
+          ))}
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button
-            onClick={() => setShowImport(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, backgroundColor: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-          >
-            <Upload size={16} />
-            Importieren
-          </button>
-          <button
-            onClick={() => setShowForm(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, backgroundColor: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-          >
-            <Plus size={16} />
-            Neuer Kontakt
-          </button>
+
+        {/* Summary pills */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          {(tab === 'vg' ? [
+            { label: `${vgActive} Aktiv`, color: '#FF9F0A' },
+            { label: `${vgAbg} Abschlüsse`, color: '#30D158' },
+            { label: `${contacts.filter(c => c.vg_stage).length} Gesamt`, color: '#6366f1' },
+          ] : [
+            { label: `${rgActive} Aktiv`, color: '#FF9F0A' },
+            { label: `${rgTeam} Im Team`, color: '#30D158' },
+            { label: `${contacts.filter(c => c.rg_stage).length} Gesamt`, color: '#6366f1' },
+          ]).map(p => (
+            <div key={p.label} style={{ fontSize: 12, fontWeight: 700, color: p.color, backgroundColor: p.color + '18', padding: '5px 12px', borderRadius: 20, border: `1px solid ${p.color}30` }}>
+              {p.label}
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Kanban Board */}
-      <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 16 }}>
-        {stages.map((stage) => {
-          const stageContacts = contacts.filter((c) => c.stage === stage.id)
+      {/* Stage Tab Bar */}
+      <div style={{
+        display: 'flex', gap: 6, overflowX: 'auto', marginBottom: 16,
+        paddingBottom: 4, scrollbarWidth: 'none',
+        WebkitOverflowScrolling: 'touch',
+      }}>
+        {stages.map(stage => {
+          const count = contacts.filter(c => c[field as keyof Contact] === stage.id).length
+          const isActive = activeStage === stage.id
           return (
-            <div key={stage.id} style={{ minWidth: 230, flex: 1, backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
-              <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: stage.color }} />
-                  <span style={{ fontSize: 12, fontWeight: 600 }}>{stage.label}</span>
+            <button key={stage.id} onClick={() => setActiveStage(stage.id)} style={{
+              flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6,
+              padding: '8px 14px', borderRadius: 20,
+              border: `1px solid ${isActive ? stage.color + '50' : 'var(--border)'}`,
+              cursor: 'pointer',
+              backgroundColor: isActive ? stage.color + '22' : 'var(--bg-card)',
+              transition: 'all 0.15s',
+            }}>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: isActive ? stage.color : 'rgba(255,255,255,0.3)', flexShrink: 0 }} />
+              <span style={{ fontSize: 12, fontWeight: isActive ? 700 : 500, color: isActive ? stage.color : 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                {stage.label}
+              </span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: isActive ? stage.color : 'var(--text-tertiary)', backgroundColor: isActive ? stage.color + '25' : 'var(--bg-hover)', borderRadius: 10, padding: '1px 7px', minWidth: 20, textAlign: 'center' }}>
+                {count}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Contact Cards */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {stageContacts.length === 0 ? (
+          <div style={{
+            backgroundColor: 'var(--bg-card)', border: '1px dashed var(--border)',
+            borderRadius: 16, padding: '40px 20px', textAlign: 'center',
+            color: 'var(--text-tertiary)', fontSize: 14,
+          }}>
+            Keine Kontakte in „{currentStage?.label}"
+          </div>
+        ) : stageContacts.map(contact => {
+          const color = avatarColor(contact.name)
+          const last  = daysAgo(contact.last_contact, contact.created_at)
+          const isWarm = contact.last_contact
+            ? Math.floor((Date.now() - new Date(contact.last_contact).getTime()) / 86400000) <= 3
+            : false
+
+          return (
+            <div key={contact.id} onClick={() => setSelected(contact)} style={{
+              backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)',
+              borderLeft: `3px solid ${color}`,
+              borderRadius: 16, padding: '14px 16px', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 12,
+            }}>
+              <div style={{
+                width: 42, height: 42, borderRadius: '50%', flexShrink: 0,
+                backgroundColor: color + '22',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 14, fontWeight: 700, color,
+              }}>
+                {initials(contact.name)}
+              </div>
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {contact.name}
                 </div>
-                <span style={{ fontSize: 11, fontWeight: 700, backgroundColor: stage.color + '22', color: stage.color, padding: '2px 8px', borderRadius: 20 }}>
-                  {stageContacts.length}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
+                  <span style={{ fontSize: 12, color: isWarm ? '#30D158' : 'var(--text-tertiary)', fontWeight: isWarm ? 600 : 400 }}>
+                    {last}
+                  </span>
+                  {contact.einheiten && tab === 'vg' && (
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#FF9F0A', backgroundColor: '#FF9F0A18', padding: '1px 7px', borderRadius: 8 }}>
+                      {contact.einheiten} E
+                    </span>
+                  )}
+                </div>
               </div>
-              <div style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 8, minHeight: 200 }}>
-                {stageContacts.map((contact) => (
-                  <div
-                    key={contact.id}
-                    onClick={() => setSelected(contact)}
-                    style={{ backgroundColor: 'var(--bg-hover)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px', cursor: 'pointer' }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div style={{ fontWeight: 600, fontSize: 13 }}>{contact.name}</div>
-                      <span style={{ fontSize: 10, backgroundColor: contact.type === 'partner' ? '#6366f120' : '#22c55e20', color: contact.type === 'partner' ? '#6366f1' : '#22c55e', padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>
-                        {contact.type === 'partner' ? 'Partner' : 'Kunde'}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 6 }}>
-                      📱 {contact.source} · {new Date(contact.last_contact).toLocaleDateString('de-DE')}
-                    </div>
-                    {contact.phone && (
-                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>{contact.phone}</div>
-                    )}
-                  </div>
-                ))}
-              </div>
+
+              {contact.phone && (
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <a href={`tel:${contact.phone}`} onClick={e => e.stopPropagation()}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 10, backgroundColor: '#30D15818', textDecoration: 'none' }}>
+                    <Phone size={14} color="#30D158" />
+                  </a>
+                  <a href={`https://wa.me/${contact.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 10, backgroundColor: '#6366f118', textDecoration: 'none' }}>
+                    <MessageSquare size={14} color="#6366f1" />
+                  </a>
+                </div>
+              )}
+
+              <ChevronRight size={15} color="var(--text-tertiary)" />
             </div>
           )
         })}
       </div>
 
-      {/* Import Modal */}
-      {showImport && (
-        <ContactImport
-          onClose={() => setShowImport(false)}
-          onImported={loadContacts}
-        />
-      )}
+      {/* Contact Detail Sheet */}
+      {selected && (
+        <div
+          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 200, backdropFilter: 'blur(4px)' }}
+          onClick={e => { if (e.target === e.currentTarget) setSelected(null) }}
+        >
+          <div style={{
+            position: 'fixed', bottom: 0, left: 0, right: 0,
+            backgroundColor: '#1C1C1E', borderRadius: '22px 22px 0 0',
+            padding: '0 0 44px', maxHeight: '82vh', overflowY: 'auto',
+          }}>
+            <div style={{ width: 36, height: 4, backgroundColor: '#3A3A3C', borderRadius: 2, margin: '12px auto 0' }} />
 
-      {/* Neuer Kontakt Modal */}
-      {showForm && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: '#00000088', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
-          onClick={(e) => e.target === e.currentTarget && setShowForm(false)}>
-          <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, padding: 32, width: 480, maxWidth: '90vw' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Neuer Kontakt</h2>
-              <button onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={20} /></button>
+            {/* Header */}
+            <div style={{ padding: '18px 20px 14px', display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{
+                width: 50, height: 50, borderRadius: '50%', flexShrink: 0,
+                backgroundColor: avatarColor(selected.name) + '30',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 18, fontWeight: 700, color: avatarColor(selected.name),
+              }}>
+                {initials(selected.name)}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 20, fontWeight: 800 }}>{selected.name}</div>
+                {selected.phone && <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>{selected.phone}</div>}
+              </div>
+              <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: 22, cursor: 'pointer', padding: 4 }}>✕</button>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div>
-                <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Name *</label>
-                <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Max Mustermann"
-                  style={{ width: '100%', backgroundColor: 'var(--bg-hover)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }} />
+
+            {/* Quick actions */}
+            {selected.phone && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: '0 20px 16px' }}>
+                <a href={`tel:${selected.phone}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#30D15818', color: '#30D158', borderRadius: 14, padding: '13px', fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
+                  <Phone size={16} /> Anrufen
+                </a>
+                <a href={`https://wa.me/${selected.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#6366f118', color: '#6366f1', borderRadius: 14, padding: '13px', fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
+                  <MessageSquare size={16} /> WhatsApp
+                </a>
               </div>
-              <div>
-                <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Telefon / WhatsApp</label>
-                <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+49 123 456789"
-                  style={{ width: '100%', backgroundColor: 'var(--bg-hover)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }} />
+            )}
+
+            {/* Stage selector */}
+            <div style={{ padding: '0 20px' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.06em', marginBottom: 10 }}>
+                STAGE ÄNDERN
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div>
-                  <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Quelle</label>
-                  <select value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })}
-                    style={{ width: '100%', backgroundColor: 'var(--bg-hover)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }}>
-                    <option>Instagram</option>
-                    <option>WhatsApp</option>
-                    <option>Empfehlung</option>
-                    <option>Kaltakquise</option>
-                    <option>Event</option>
-                    <option>LinkedIn</option>
-                    <option>Sonstiges</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Typ</label>
-                  <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as ContactType })}
-                    style={{ width: '100%', backgroundColor: 'var(--bg-hover)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }}>
-                    <option value="kunde">Kunde</option>
-                    <option value="partner">Geschäftspartner</option>
-                  </select>
-                </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {stages.map((stage, idx) => {
+                  const isActiveStage = selected[field as keyof Contact] === stage.id
+                  const isNext = idx > 0 && selected[field as keyof Contact] === stages[idx - 1].id
+                  return (
+                    <button key={stage.id}
+                      onClick={() => !isActiveStage && moveStage(selected, stage.id)}
+                      disabled={moving}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        padding: '13px 16px', width: '100%',
+                        background: isActiveStage ? stage.color + '18' : 'none',
+                        border: `1px solid ${isActiveStage ? stage.color + '50' : isNext ? stage.color + '30' : 'rgba(255,255,255,0.07)'}`,
+                        borderRadius: 12, cursor: isActiveStage ? 'default' : 'pointer',
+                        transition: 'all 0.15s',
+                      }}>
+                      <div style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: isActiveStage ? stage.color : 'rgba(255,255,255,0.15)', flexShrink: 0, boxShadow: isActiveStage ? `0 0 8px ${stage.color}70` : 'none' }} />
+                      <span style={{ fontSize: 14, fontWeight: isActiveStage ? 700 : 400, color: isActiveStage ? stage.color : 'var(--text-primary)', flex: 1, textAlign: 'left' }}>
+                        {stage.label}
+                      </span>
+                      {isActiveStage && <span style={{ fontSize: 11, fontWeight: 700, color: stage.color, backgroundColor: stage.color + '20', padding: '2px 8px', borderRadius: 10 }}>Aktuell</span>}
+                      {isNext && !isActiveStage && <span style={{ fontSize: 11, color: stage.color, opacity: 0.7 }}>→ Weiter</span>}
+                    </button>
+                  )
+                })}
               </div>
-              <div>
-                <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Notizen</label>
-                <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                  placeholder="Erstkontakt über Instagram, interessiert an Altersvorsorge..." rows={3}
-                  style={{ width: '100%', backgroundColor: 'var(--bg-hover)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', color: 'var(--text-primary)', fontSize: 14, outline: 'none', resize: 'vertical', fontFamily: 'inherit' }} />
-              </div>
-              <button onClick={addContact} disabled={saving}
-                style={{ backgroundColor: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, padding: '12px', fontSize: 14, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1, marginTop: 8 }}>
-                {saving ? 'Speichern...' : 'Kontakt hinzufügen'}
+            </div>
+
+            <div style={{ padding: '16px 20px 0' }}>
+              <button onClick={() => setSelected(null)} style={{ width: '100%', backgroundColor: 'var(--bg-hover)', border: 'none', borderRadius: 14, padding: '14px', fontSize: 15, fontWeight: 600, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                Schließen
               </button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Detail Panel */}
-      {selected && (
-        <div style={{ position: 'fixed', right: 0, top: 0, bottom: 0, width: 360, backgroundColor: 'var(--bg-secondary)', borderLeft: '1px solid var(--border)', padding: 28, overflowY: 'auto', zIndex: 50 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{selected.name}</h2>
-            <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={20} /></button>
-          </div>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
-            <a href={`tel:${selected.phone}`}
-              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#22c55e20', color: '#22c55e', border: '1px solid #22c55e40', borderRadius: 8, padding: '10px', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
-              <Phone size={14} /> Anrufen
-            </a>
-            <a href={`https://wa.me/${selected.phone?.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"
-              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#6366f120', color: '#6366f1', border: '1px solid #6366f140', borderRadius: 8, padding: '10px', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
-              <MessageSquare size={14} /> WhatsApp
-            </a>
-          </div>
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 12, fontWeight: 600, letterSpacing: '0.05em' }}>STAGE WECHSELN</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {stages.map((stage) => (
-                <button key={stage.id} onClick={() => moveStage(selected.id, stage.id)}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: selected.stage === stage.id ? stage.color + '22' : 'var(--bg-hover)', border: `1px solid ${selected.stage === stage.id ? stage.color + '66' : 'var(--border)'}`, borderRadius: 8, padding: '9px 14px', fontSize: 13, color: selected.stage === stage.id ? stage.color : 'var(--text-secondary)', cursor: 'pointer', fontWeight: selected.stage === stage.id ? 600 : 400 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: stage.color }} />
-                    {stage.label}
-                  </div>
-                  {selected.stage === stage.id && <ChevronRight size={14} />}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 16, marginBottom: 20 }}>
-            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 12, fontWeight: 600, letterSpacing: '0.05em' }}>DETAILS</div>
-            {[
-              { label: 'Telefon', value: selected.phone || '—' },
-              { label: 'Quelle', value: selected.source },
-              { label: 'Typ', value: selected.type === 'partner' ? 'Geschäftspartner' : 'Kunde' },
-              { label: 'Hinzugefügt', value: new Date(selected.created_at).toLocaleDateString('de-DE') },
-              { label: 'Letzter Kontakt', value: new Date(selected.last_contact).toLocaleDateString('de-DE') },
-            ].map((item) => (
-              <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13 }}>
-                <span style={{ color: 'var(--text-secondary)' }}>{item.label}</span>
-                <span style={{ fontWeight: 500 }}>{item.value}</span>
-              </div>
-            ))}
-          </div>
-          {selected.notes && (
-            <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 16, marginBottom: 20 }}>
-              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8, fontWeight: 600, letterSpacing: '0.05em' }}>NOTIZEN</div>
-              <p style={{ fontSize: 13, margin: 0, lineHeight: 1.6, color: 'var(--text-secondary)' }}>{selected.notes}</p>
-            </div>
-          )}
-          <button onClick={() => deleteContact(selected.id)}
-            style={{ width: '100%', backgroundColor: '#ef444420', color: '#ef4444', border: '1px solid #ef444440', borderRadius: 8, padding: '10px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-            Kontakt löschen
-          </button>
         </div>
       )}
     </div>

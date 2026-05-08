@@ -1,46 +1,145 @@
 @import "tailwindcss";
 
+/* ══════════════════════════════════════════════════════════
+   FTMO Design System — 1:1 recreation
+   ══════════════════════════════════════════════════════════ */
 :root {
-  --bg-primary: #0a0a0f;
-  --bg-secondary: #111118;
-  --bg-card: #16161f;
-  --bg-hover: #1e1e2a;
-  --border: #2a2a3a;
-  --accent: #6366f1;
-  --accent-hover: #5557e8;
-  --text-primary: #f0f0ff;
-  --text-secondary: #8888aa;
+  /* ── Backgrounds ── */
+  --bg-primary:    #080c14;    /* deep navy — FTMO page bg */
+  --bg-secondary:  #0e1420;    /* slightly lighter */
+  --bg-card:       #141a24;    /* card surfaces */
+  --bg-hover:      #1c2436;    /* inputs, hover states */
+  --bg-tertiary:   #232d42;
+
+  /* ── Borders ── */
+  --border:        rgba(255,255,255,0.07);
+  --separator:     rgba(255,255,255,0.05);
+
+  /* ── Brand ── */
+  --accent:        #1e7ef7;    /* FTMO blue */
+  --accent-hover:  #1565d8;
+
+  /* ── Text ── */
+  --text-primary:   #FFFFFF;
+  --text-secondary: #7a8499;
+  --text-tertiary:  #4a5568;
+
+  /* ── Status ── */
   --success: #22c55e;
   --warning: #f59e0b;
-  --danger: #ef4444;
+  --danger:  #ef4444;
+
+  /* ── Radii ── */
+  --r-sm:  10px;
+  --r-md:  14px;
+  --r-lg:  18px;
+  --r-xl:  22px;
 }
 
-* {
-  box-sizing: border-box;
+* { box-sizing: border-box; }
+
+html {
+  background: #080c14;
 }
 
 body {
-  background-color: var(--bg-primary);
+  background: linear-gradient(180deg, #0d1526 0%, #060a12 100%) fixed;
+  background-attachment: fixed;
   color: var(--text-primary);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
 }
 
-::-webkit-scrollbar {
-  width: 4px;
-}
-::-webkit-scrollbar-track { background: var(--bg-secondary); }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+/* ── Scrollbars ── */
+::-webkit-scrollbar { width: 0px; height: 0px; }
 
-/* Desktop: Sidebar sichtbar, Bottom Nav versteckt */
+/* ── FTMO Card ── */
+.ftmo-card {
+  background: var(--bg-card);
+  border-radius: var(--r-lg);
+  padding: 16px 18px;
+  margin-bottom: 10px;
+}
+
+/* ── FTMO List Row ── */
+.ftmo-row {
+  display: flex;
+  align-items: center;
+  background: var(--bg-card);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  gap: 14px;
+  margin-bottom: 8px;
+  min-height: 56px;
+}
+
+/* ── FTMO Section Label ── */
+.ftmo-section {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0 4px 10px;
+  margin-top: 8px;
+}
+
+/* ── FTMO Page Title ── */
+.ftmo-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.3px;
+  line-height: 1.1;
+}
+
+/* ── Legacy helpers — kept for compatibility ── */
+.ios-group {
+  background: var(--bg-card);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+.ios-row {
+  display: flex;
+  align-items: center;
+  min-height: 54px;
+  padding: 12px 16px;
+  gap: 12px;
+  position: relative;
+}
+.ios-row + .ios-row::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 56px; right: 0;
+  height: 0.5px;
+  background: var(--separator);
+}
+.ios-section-header {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  padding: 0 4px 8px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.ios-large-title {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  line-height: 1.1;
+}
+
+/* ── Layout ── */
 .desktop-sidebar { display: flex; }
 .mobile-nav { display: none; }
 .main-content { padding: 32px !important; }
 
-/* Mobile: Sidebar versteckt, Bottom Nav sichtbar */
 @media (max-width: 768px) {
   .desktop-sidebar { display: none !important; }
   .mobile-nav { display: block; }
   .main-content {
-    padding: 20px 16px 80px 16px !important;
+    padding: 0 0 calc(86px + env(safe-area-inset-bottom)) 0 !important;
   }
 }

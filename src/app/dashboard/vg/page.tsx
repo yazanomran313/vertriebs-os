@@ -257,15 +257,16 @@ export default function VGPage() {
         ) : (
           <div style={{ maxHeight: 280, overflowY: 'auto' }}>
             {namensliste.map(c => (
-              <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 20px', borderBottom: '1px solid var(--border)' }}>
-                <div style={{ flex: 1 }}>
+              <div key={c.id} onClick={() => setSelected(c)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 20px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ fontWeight: 600, fontSize: 13 }}>{c.name}</span>
                   {c.beruf && <span style={{ fontSize: 12, color: 'var(--text-secondary)', marginLeft: 8 }}>{c.beruf}</span>}
                   {c.einheiten && <span style={{ fontSize: 11, color: '#6366f1', marginLeft: 8, fontWeight: 700 }}>{c.einheiten} E</span>}
                 </div>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button onClick={() => { setSelected(c) }} style={{ fontSize: 11, backgroundColor: 'var(--bg-hover)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', color: 'var(--text-secondary)' }}>Details</button>
-                  <button onClick={() => promoteToVG(c.id)} style={{ fontSize: 11, backgroundColor: '#6366f120', border: '1px solid #6366f140', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', color: '#6366f1', fontWeight: 600 }}>→ Potenzial</button>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <button onClick={e => { e.stopPropagation(); promoteToVG(c.id) }} style={{ fontSize: 11, backgroundColor: '#6366f120', border: '1px solid #6366f140', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', color: '#6366f1', fontWeight: 600 }}>→ Potenzial</button>
+                  <ChevronRight size={13} color="var(--text-tertiary)" />
                 </div>
               </div>
             ))}

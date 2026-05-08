@@ -1,12 +1,13 @@
 {
-  "name": "Command Center",
-  "short_name": "CC",
-  "description": "Dein Business OS",
+  "name": "Vertriebs-OS",
+  "short_name": "Vertriebs-OS",
+  "description": "Dein Sales Command Center",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#0a0a0f",
   "theme_color": "#6366f1",
   "orientation": "portrait",
+  "categories": ["business", "productivity"],
   "icons": [
     {
       "src": "/icon-192.png",
@@ -19,6 +20,21 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "TTV starten",
+      "short_name": "TTV",
+      "description": "Neue TTV Session starten",
+      "url": "/dashboard/ttv",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Pipeline",
+      "short_name": "Pipeline",
+      "url": "/dashboard/pipeline",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

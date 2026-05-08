@@ -15,7 +15,6 @@ interface Contact {
   sparsumme: number | null; alter_jahre: number | null; einheiten: number | null
   folder: string | null; haushaltsplan: Record<string, unknown> | null
   notes: string | null; created_at: string
-  dsgvo: Record<string, unknown> | null
 }
 
 const EINNAHMEN = [
@@ -150,38 +149,43 @@ function Haushaltsplan({ contact, onSave }: { contact: Contact; onSave: (id: str
 
   const numStyle: React.CSSProperties = {
     backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)',
-    borderRadius: 6, padding: '4px 7px', color: 'var(--text-primary)',
-    fontSize: 12, outline: 'none', width: '75px', textAlign: 'right',
+    borderRadius: 8, padding: '8px 12px', color: 'var(--text-primary)',
+    fontSize: 14, fontWeight: 600, outline: 'none', width: '100px',
+    textAlign: 'right', WebkitAppearance: 'none',
   }
 
   return (
     <div>
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.08em', marginBottom: 10 }}>💰 EINNAHMEN & AUSGABEN</div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-        <div>
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#22c55e', marginBottom: 7 }}>EINNAHMEN</div>
-          {EINNAHMEN.map(f => (
-            <div key={f.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-              <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{f.label}</span>
-              <input type="number" value={hp[f.key] || ''} onChange={e => setVal(f.key, e.target.value)} placeholder="0" style={numStyle} />
+      {/* EINNAHMEN */}
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: '#22c55e', letterSpacing: '0.1em', marginBottom: 8 }}>EINNAHMEN</div>
+        <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+          {EINNAHMEN.map((f, i) => (
+            <div key={f.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderBottom: i < EINNAHMEN.length - 1 ? '0.5px solid var(--border)' : 'none' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{f.label}</span>
+              <input type="number" inputMode="decimal" value={hp[f.key] || ''} onChange={e => setVal(f.key, e.target.value)} placeholder="0" style={numStyle} />
             </div>
           ))}
-          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 6, marginTop: 3, display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#22c55e' }}>Gesamt</span>
-            <span style={{ fontSize: 13, fontWeight: 800, color: '#22c55e' }}>{sumE.toLocaleString('de-DE')} €</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', backgroundColor: '#22c55e0A' }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#22c55e' }}>Gesamt</span>
+            <span style={{ fontSize: 16, fontWeight: 800, color: '#22c55e' }}>{sumE.toLocaleString('de-DE')} €</span>
           </div>
         </div>
-        <div>
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#ef4444', marginBottom: 7 }}>AUSGABEN</div>
-          {AUSGABEN.map(f => (
-            <div key={f.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-              <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{f.label}</span>
-              <input type="number" value={hp[f.key] || ''} onChange={e => setVal(f.key, e.target.value)} placeholder="0" style={numStyle} />
+      </div>
+
+      {/* AUSGABEN */}
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: '#ef4444', letterSpacing: '0.1em', marginBottom: 8 }}>AUSGABEN</div>
+        <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+          {AUSGABEN.map((f, i) => (
+            <div key={f.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderBottom: i < AUSGABEN.length - 1 ? '0.5px solid var(--border)' : 'none' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{f.label}</span>
+              <input type="number" inputMode="decimal" value={hp[f.key] || ''} onChange={e => setVal(f.key, e.target.value)} placeholder="0" style={numStyle} />
             </div>
           ))}
-          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 6, marginTop: 3, display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#ef4444' }}>Gesamt</span>
-            <span style={{ fontSize: 13, fontWeight: 800, color: '#ef4444' }}>{sumA.toLocaleString('de-DE')} €</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', backgroundColor: '#ef44440A' }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#ef4444' }}>Gesamt</span>
+            <span style={{ fontSize: 16, fontWeight: 800, color: '#ef4444' }}>{sumA.toLocaleString('de-DE')} €</span>
           </div>
         </div>
       </div>
@@ -257,99 +261,6 @@ function Haushaltsplan({ contact, onSave }: { contact: Contact; onSave: (id: str
   )
 }
 
-// ─── DSGVO Tab ────────────────────────────────────────────────────────────────
-function DSGVOTab({ contact, onUpdate, onDelete }: {
-  contact: Contact
-  onUpdate: (id: string, changes: Partial<Contact>) => void
-  onDelete: (id: string) => void
-}) {
-  const dsgvo = (contact.dsgvo || {}) as Record<string, unknown>
-  const [einwilligung, setEinwilligung] = useState<boolean>(!!(dsgvo.einwilligung))
-  const [einwilligungDatum, setEinwilligungDatum] = useState<string>((dsgvo.einwilligungDatum as string) || '')
-  const [whatsapp, setWhatsapp] = useState<boolean>(!!(dsgvo.whatsapp))
-  const [email, setEmail] = useState<boolean>(!!(dsgvo.email))
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
-
-  useEffect(() => {
-    const d = (contact.dsgvo || {}) as Record<string, unknown>
-    setEinwilligung(!!(d.einwilligung))
-    setEinwilligungDatum((d.einwilligungDatum as string) || '')
-    setWhatsapp(!!(d.whatsapp))
-    setEmail(!!(d.email))
-  }, [contact.id])
-
-  async function save() {
-    setSaving(true)
-    const data = { einwilligung, einwilligungDatum, whatsapp, email }
-    await supabase.from('contacts').update({ dsgvo: data }).eq('id', contact.id)
-    onUpdate(contact.id, { dsgvo: data })
-    setSaving(false); setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-  }
-
-  const cbStyle: React.CSSProperties = { width: 16, height: 16, cursor: 'pointer', accentColor: '#6366f1' }
-
-  return (
-    <div>
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.08em', marginBottom: 14 }}>🔒 DSGVO-EINWILLIGUNGEN</div>
-
-      {/* Einwilligung Datenverarbeitung */}
-      <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 14, marginBottom: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: einwilligung ? 10 : 0 }}>
-          <input type="checkbox" checked={einwilligung} onChange={e => setEinwilligung(e.target.checked)} style={cbStyle} />
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Einwilligung zur Datenverarbeitung</span>
-          {einwilligung && <span style={{ marginLeft: 'auto', fontSize: 10, color: '#22c55e', fontWeight: 700, backgroundColor: '#22c55e20', padding: '2px 7px', borderRadius: 10 }}>AKTIV</span>}
-        </div>
-        {einwilligung && (
-          <div>
-            <label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Datum der Einwilligung</label>
-            <input type="date" value={einwilligungDatum} onChange={e => setEinwilligungDatum(e.target.value)} style={{ ...iStyle, fontSize: 12 }} />
-          </div>
-        )}
-      </div>
-
-      {/* WhatsApp */}
-      <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 14, marginBottom: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <input type="checkbox" checked={whatsapp} onChange={e => setWhatsapp(e.target.checked)} style={cbStyle} />
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Einwilligung zum Kontakt per WhatsApp</span>
-          {whatsapp && <span style={{ marginLeft: 'auto', fontSize: 10, color: '#22c55e', fontWeight: 700, backgroundColor: '#22c55e20', padding: '2px 7px', borderRadius: 10 }}>AKTIV</span>}
-        </div>
-      </div>
-
-      {/* E-Mail */}
-      <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 14, marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <input type="checkbox" checked={email} onChange={e => setEmail(e.target.checked)} style={cbStyle} />
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Einwilligung per E-Mail</span>
-          {email && <span style={{ marginLeft: 'auto', fontSize: 10, color: '#22c55e', fontWeight: 700, backgroundColor: '#22c55e20', padding: '2px 7px', borderRadius: 10 }}>AKTIV</span>}
-        </div>
-      </div>
-
-      <button onClick={save} disabled={saving}
-        style={{ width: '100%', backgroundColor: saved ? '#22c55e' : '#6366f1', color: '#fff', border: 'none', borderRadius: 8, padding: '10px', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 12, transition: 'background 0.2s' }}>
-        {saved ? '✓ Gespeichert' : saving ? 'Speichern…' : 'DSGVO-Daten speichern'}
-      </button>
-
-      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#ef4444', marginBottom: 8, letterSpacing: '0.06em' }}>DATENLÖSCHUNG (ART. 17 DSGVO)</div>
-        <button onClick={() => {
-          if (confirm('Dieser Kontakt und alle seine Daten werden unwiderruflich gelöscht.\n\nWirklich fortfahren?')) {
-            onDelete(contact.id)
-          }
-        }}
-          style={{ width: '100%', backgroundColor: '#ef444420', color: '#ef4444', border: '1px solid #ef444440', borderRadius: 8, padding: '11px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-          🗑️ Kontakt löschen (Art. 17 DSGVO)
-        </button>
-        <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-          Auf Verlangen der betroffenen Person werden alle gespeicherten Daten unwiderruflich gelöscht.
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ─── Detail Panel ─────────────────────────────────────────────────────────────
 function DetailPanel({ contact, onClose, onUpdate, onDelete, isMobile }: {
   contact: Contact
@@ -358,14 +269,33 @@ function DetailPanel({ contact, onClose, onUpdate, onDelete, isMobile }: {
   onDelete: (id: string) => void
   isMobile: boolean
 }) {
-  const [activeTab, setActiveTab] = useState<'pipeline' | 'haushaltsplan' | 'dsgvo'>('pipeline')
+  const [activeTab, setActiveTab] = useState<'pipeline' | 'haushaltsplan'>('pipeline')
   const [savingVG, setSavingVG] = useState(false)
   const [savingRG, setSavingRG] = useState(false)
   const [editNotes, setEditNotes] = useState(contact.notes || '')
+  const [callbackDate, setCallbackDate] = useState<string>(() => {
+    try { return JSON.parse(localStorage.getItem('callbacks') || '{}')[contact.id] || '' } catch { return '' }
+  })
+  const [callbackSaved, setCallbackSaved] = useState(false)
 
   useEffect(() => {
     setEditNotes(contact.notes || '')
+    try {
+      const cb = JSON.parse(localStorage.getItem('callbacks') || '{}')
+      setCallbackDate(cb[contact.id] || '')
+    } catch { setCallbackDate('') }
   }, [contact.id])
+
+  function saveCallback(date: string) {
+    try {
+      const cb = JSON.parse(localStorage.getItem('callbacks') || '{}')
+      if (date) { cb[contact.id] = date } else { delete cb[contact.id] }
+      localStorage.setItem('callbacks', JSON.stringify(cb))
+      setCallbackDate(date)
+      setCallbackSaved(true)
+      setTimeout(() => setCallbackSaved(false), 1500)
+    } catch { /* ignore */ }
+  }
 
   async function toggleVG() {
     setSavingVG(true)
@@ -437,7 +367,6 @@ function DetailPanel({ contact, onClose, onUpdate, onDelete, isMobile }: {
         <div style={{ display: 'flex', gap: 2, backgroundColor: 'var(--bg-hover)', borderRadius: 8, padding: 3 }}>
           {[
             { id: 'pipeline', label: '📊 Pipeline' },
-            { id: 'dsgvo', label: '🔒 DSGVO' },
             { id: 'haushaltsplan', label: '💰 Haushalt' },
           ].map(t => (
             <button key={t.id} onClick={() => setActiveTab(t.id as typeof activeTab)}
@@ -526,6 +455,49 @@ function DetailPanel({ contact, onClose, onUpdate, onDelete, isMobile }: {
               </div>
             )}
 
+            {/* Rückruf planen */}
+            <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 14, marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: callbackDate ? 10 : 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 14 }}>🔔</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Rückruf planen</span>
+                  {callbackDate && (
+                    <span style={{ fontSize: 10, fontWeight: 700, color: callbackDate <= new Date().toISOString().split('T')[0] ? '#FF453A' : '#FF9F0A', backgroundColor: (callbackDate <= new Date().toISOString().split('T')[0] ? '#FF453A' : '#FF9F0A') + '18', padding: '2px 7px', borderRadius: 8 }}>
+                      {callbackDate <= new Date().toISOString().split('T')[0] ? 'ÜBERFÄLLIG' : 'GEPLANT'}
+                    </span>
+                  )}
+                </div>
+                {callbackSaved && <span style={{ fontSize: 11, color: '#30D158', fontWeight: 700 }}>✓ Gespeichert</span>}
+              </div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input
+                  type="date"
+                  value={callbackDate}
+                  min={new Date().toISOString().split('T')[0]}
+                  onChange={e => saveCallback(e.target.value)}
+                  style={{ flex: 1, ...iStyle, fontSize: 13, padding: '8px 10px' }}
+                />
+                {callbackDate && (
+                  <button onClick={() => saveCallback('')} style={{ padding: '8px 12px', backgroundColor: '#ef444418', color: '#ef4444', border: '1px solid #ef444430', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                    Löschen
+                  </button>
+                )}
+              </div>
+              {!callbackDate && (
+                <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                  {[1, 2, 3, 7, 14].map(d => {
+                    const date = new Date(); date.setDate(date.getDate() + d)
+                    const iso = date.toISOString().split('T')[0]
+                    return (
+                      <button key={d} onClick={() => saveCallback(iso)} style={{ padding: '5px 10px', backgroundColor: 'var(--bg-hover)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                        +{d}T
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
             {/* Notes */}
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6, letterSpacing: '0.06em' }}>NOTIZEN</div>
@@ -540,10 +512,6 @@ function DetailPanel({ contact, onClose, onUpdate, onDelete, isMobile }: {
               Kontakt löschen
             </button>
           </div>
-        )}
-
-        {activeTab === 'dsgvo' && (
-          <DSGVOTab contact={contact} onUpdate={onUpdate} onDelete={onDelete} />
         )}
 
         {activeTab === 'haushaltsplan' && (
@@ -564,10 +532,122 @@ export default function NamenslistePage() {
   const [search, setSearch]           = useState('')
   const [selected, setSelected]       = useState<Contact | null>(null)
   const [showImport, setShowImport]   = useState(false)
+
+  // ── Bulk Selection ──
+  const [editMode, setEditMode]       = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkLoading, setBulkLoading] = useState(false)
+
+  function toggleEditMode() {
+    setEditMode(v => !v)
+    setSelectedIds(new Set())
+    setSelected(null)
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  function selectAll() {
+    setSelectedIds(new Set(filtered.map(c => c.id)))
+  }
+
+  function deselectAll() {
+    setSelectedIds(new Set())
+  }
+
+  async function bulkSetVG() {
+    if (!selectedIds.size) return
+    setBulkLoading(true)
+    const ids = Array.from(selectedIds)
+    await supabase.from('contacts').update({ vg_stage: 'kundenpotenzial' }).in('id', ids)
+    setContacts(prev => prev.map(c => ids.includes(c.id) ? { ...c, vg_stage: 'kundenpotenzial' } : c))
+    setBulkLoading(false); setEditMode(false); setSelectedIds(new Set())
+  }
+
+  async function bulkSetRG() {
+    if (!selectedIds.size) return
+    setBulkLoading(true)
+    const ids = Array.from(selectedIds)
+    await supabase.from('contacts').update({ rg_stage: 'partnerpotenzial' }).in('id', ids)
+    setContacts(prev => prev.map(c => ids.includes(c.id) ? { ...c, rg_stage: 'partnerpotenzial' } : c))
+    setBulkLoading(false); setEditMode(false); setSelectedIds(new Set())
+  }
+
+  async function bulkClearPipeline() {
+    if (!selectedIds.size) return
+    setBulkLoading(true)
+    const ids = Array.from(selectedIds)
+    await supabase.from('contacts').update({ vg_stage: null, rg_stage: null }).in('id', ids)
+    setContacts(prev => prev.map(c => ids.includes(c.id) ? { ...c, vg_stage: null, rg_stage: null } : c))
+    setBulkLoading(false); setEditMode(false); setSelectedIds(new Set())
+  }
+
+  async function bulkDelete() {
+    if (!selectedIds.size) return
+    if (!confirm(`${selectedIds.size} Kontakte wirklich löschen? Das kann nicht rückgängig gemacht werden.`)) return
+    setBulkLoading(true)
+    const ids = Array.from(selectedIds)
+    await supabase.from('contacts').delete().in('id', ids)
+    setContacts(prev => prev.filter(c => !ids.includes(c.id)))
+    setBulkLoading(false); setEditMode(false); setSelectedIds(new Set())
+  }
+  // Right-swipe VG action: assign if not in pipeline, else advance to next stage
+  async function swipeVGAction(contact: Contact) {
+    let newStage: string
+    if (!contact.vg_stage) {
+      newStage = VG_STAGES[0].id
+    } else {
+      const idx = VG_STAGES.findIndex(s => s.id === contact.vg_stage)
+      if (idx >= VG_STAGES.length - 1) return // already at last stage
+      newStage = VG_STAGES[idx + 1].id
+    }
+    await supabase.from('contacts').update({ vg_stage: newStage }).eq('id', contact.id)
+    setContacts(prev => prev.map(c => c.id === contact.id ? { ...c, vg_stage: newStage } : c))
+  }
+
+  // Right-swipe RG action: assign if not in pipeline, else advance to next stage
+  async function swipeRGAction(contact: Contact) {
+    let newStage: string
+    if (!contact.rg_stage) {
+      newStage = RG_STAGES[0].id
+    } else {
+      const idx = RG_STAGES.findIndex(s => s.id === contact.rg_stage)
+      if (idx >= RG_STAGES.length - 1) return
+      newStage = RG_STAGES[idx + 1].id
+    }
+    await supabase.from('contacts').update({ rg_stage: newStage }).eq('id', contact.id)
+    setContacts(prev => prev.map(c => c.id === contact.id ? { ...c, rg_stage: newStage } : c))
+  }
+
+  // ── Manage / Delete-All modal ──
+  const [showManage, setShowManage] = useState(false)
+  const [deleting, setDeleting]     = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<{ ids: string[]; label: string } | null>(null)
+
+  async function confirmDelete() {
+    if (!pendingDelete) return
+    const { ids, label } = pendingDelete
+    setPendingDelete(null)
+    setDeleting(true)
+    for (let i = 0; i < ids.length; i += 100) {
+      await supabase.from('contacts').delete().in('id', ids.slice(i, i + 100))
+    }
+    setContacts(prev => prev.filter(c => !ids.includes(c.id)))
+    setDeleting(false)
+    void label
+  }
+
+  // ── Import ──
   const [importText, setImportText]   = useState('')
   const [importing, setImporting]     = useState(false)
   const [importTab, setImportTab]     = useState<'text' | 'vcf'>('vcf')
   const [vcfPreview, setVcfPreview]   = useState<{name:string;phone:string|null;beruf:string|null}[]>([])
+  const [skipDupes, setSkipDupes]     = useState(true)
 
   // Folders
   const [folders, setFolders]               = useState<string[]>([])
@@ -590,10 +670,38 @@ export default function NamenslistePage() {
   const sparRef  = useRef<HTMLInputElement>(null)
   const alterRef = useRef<HTMLInputElement>(null)
 
+  // Phone contacts autocomplete for quick-add
+  const [phoneContacts, setPhoneContacts] = useState<{ id: string; name: string; phone: string | null; beruf: string | null }[]>([])
+  const [qSuggestions, setQSuggestions]   = useState<typeof phoneContacts>([])
+
+  useEffect(() => {
+    supabase.from('phone_contacts').select('id, name, phone, beruf').then(({ data }) => {
+      if (data) setPhoneContacts(data)
+    })
+  }, [])
+
+  function onQNameChange(val: string) {
+    setQName(val)
+    if (val.length >= 1) {
+      const q = val.toLowerCase()
+      const usedNames = new Set(contacts.map(c => c.name.toLowerCase()))
+      setQSuggestions(phoneContacts.filter(c => c.name.toLowerCase().includes(q) && !usedNames.has(c.name.toLowerCase())).slice(0, 8))
+    } else {
+      setQSuggestions([])
+    }
+  }
+
+  function pickQSuggestion(c: { name: string; phone: string | null; beruf: string | null }) {
+    setQName(c.name)
+    if (c.phone) setQPhone(c.phone)
+    if (c.beruf) setQBeruf(c.beruf)
+    setQSuggestions([])
+  }
+
   const load = useCallback(async () => {
     setLoading(true); setError('')
     const { data, error: err } = await supabase
-      .from('contacts').select('*').order('created_at', { ascending: false })
+      .from('contacts').select('id,name,beruf,phone,stage,pipeline,vg_stage,rg_stage,sparsumme,alter_jahre,einheiten,folder,haushaltsplan,notes,created_at').order('created_at', { ascending: false })
     if (err) { setError(err.message) }
     else {
       const list = (data || []) as Contact[]
@@ -616,6 +724,9 @@ export default function NamenslistePage() {
     setContacts(prev => prev.map(c => c.id === id ? { ...c, ...changes } : c))
   }
 
+  type SortBy = 'neu' | 'az' | 'za' | 'vg' | 'rg'
+  const [sortBy, setSortBy] = useState<SortBy>('neu')
+
   const filtered = contacts.filter(c => {
     const matchFolder = activeFolder === null ? true
       : activeFolder === UNASSIGNED ? !c.folder
@@ -628,6 +739,23 @@ export default function NamenslistePage() {
       || c.name.toLowerCase().includes(search.toLowerCase())
       || (c.beruf || '').toLowerCase().includes(search.toLowerCase())
     return matchFolder && matchPipe && matchSearch
+  })
+
+  const sorted = [...filtered].sort((a, b) => {
+    if (sortBy === 'az') return a.name.localeCompare(b.name, 'de')
+    if (sortBy === 'za') return b.name.localeCompare(a.name, 'de')
+    if (sortBy === 'vg') {
+      const ai = a.vg_stage ? VG_STAGES.findIndex(s => s.id === a.vg_stage) : -1
+      const bi = b.vg_stage ? VG_STAGES.findIndex(s => s.id === b.vg_stage) : -1
+      return bi - ai   // highest stage first; -1 (no stage) sinks to bottom
+    }
+    if (sortBy === 'rg') {
+      const ai = a.rg_stage ? RG_STAGES.findIndex(s => s.id === a.rg_stage) : -1
+      const bi = b.rg_stage ? RG_STAGES.findIndex(s => s.id === b.rg_stage) : -1
+      return bi - ai
+    }
+    // 'neu' — newest first (original order from DB)
+    return 0
   })
 
   async function quickAdd() {
@@ -712,13 +840,27 @@ export default function NamenslistePage() {
     if (!vcfPreview.length) return
     setImporting(true)
     const folder = activeFolder && activeFolder !== UNASSIGNED ? activeFolder : null
-    const rows = vcfPreview.map(c => ({
+    const existingPhones = new Set(contacts.map(c => c.phone).filter(Boolean))
+    const existingNames  = new Set(contacts.map(c => c.name.toLowerCase()))
+    const list = skipDupes
+      ? vcfPreview.filter(c => !(
+          (c.phone && existingPhones.has(c.phone)) ||
+          existingNames.has(c.name.toLowerCase())
+        ))
+      : vcfPreview
+    const rows = list.map(c => ({
       name: c.name, beruf: c.beruf, phone: c.phone, folder,
       pipeline: 'vg', stage: 'namensliste', type: 'kunde', source: 'Import',
       last_contact: new Date().toISOString().split('T')[0],
     }))
-    const { data } = await supabase.from('contacts').insert(rows).select()
-    if (data) setContacts(prev => [...(data as Contact[]), ...prev])
+    if (rows.length) {
+      const imported: Contact[] = []
+      for (let i = 0; i < rows.length; i += 100) {
+        const { data } = await supabase.from('contacts').insert(rows.slice(i, i + 100)).select()
+        if (data) imported.push(...(data as Contact[]))
+      }
+      if (imported.length) setContacts(prev => [...imported, ...prev])
+    }
     setVcfPreview([]); setShowImport(false); setImporting(false)
   }
 
@@ -739,8 +881,22 @@ export default function NamenslistePage() {
       }
       return { name, beruf, phone, folder, pipeline: 'vg', stage: 'namensliste', type: 'kunde', source: 'Import', sparsumme: sp, alter_jahre: al, einheiten: sp && al ? calcEinheiten(sp, al) : null, last_contact: new Date().toISOString().split('T')[0] }
     }).filter(r => r.name)
-    const { data } = await supabase.from('contacts').insert(rows).select()
-    if (data) setContacts(prev => [...(data as Contact[]), ...prev])
+    const existingPhones = new Set(contacts.map(c => c.phone).filter(Boolean))
+    const existingNames  = new Set(contacts.map(c => c.name.toLowerCase()))
+    const filtered = skipDupes
+      ? rows.filter(r => !(
+          (r.phone && existingPhones.has(r.phone)) ||
+          existingNames.has(r.name.toLowerCase())
+        ))
+      : rows
+    if (filtered.length) {
+      const imported: Contact[] = []
+      for (let i = 0; i < filtered.length; i += 100) {
+        const { data } = await supabase.from('contacts').insert(filtered.slice(i, i + 100)).select()
+        if (data) imported.push(...(data as Contact[]))
+      }
+      if (imported.length) setContacts(prev => [...imported, ...prev])
+    }
     setImportText(''); setShowImport(false); setImporting(false)
   }
 
@@ -832,10 +988,36 @@ export default function NamenslistePage() {
               {contacts.length} gesamt · <span style={{ color: '#6b7280' }}>{offenCount} offen</span> · <span style={{ color: '#6366f1' }}>{vgCount} VG</span> · <span style={{ color: '#22c55e' }}>{rgCount} RG</span>
             </p>
           </div>
-          <button onClick={() => setShowImport(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, backgroundColor: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 13px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-            <Upload size={13} /> {isMobile ? '' : 'Import'}
-          </button>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {editMode && (
+              <div style={{ display: 'flex', gap: 4 }}>
+                <button onClick={selectAll}
+                  style={{ backgroundColor: 'var(--bg-card)', color: '#6366f1', border: '1px solid #6366f144', borderRadius: 8, padding: '8px 11px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                  Alle
+                </button>
+                <button onClick={deselectAll}
+                  style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                  Keine
+                </button>
+              </div>
+            )}
+            <button onClick={toggleEditMode}
+              style={{ backgroundColor: editMode ? '#6366f1' : 'var(--bg-card)', color: editMode ? '#fff' : 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 13px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+              {editMode ? 'Fertig' : 'Auswählen'}
+            </button>
+            {!editMode && (
+              <>
+                <button onClick={() => setShowImport(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, backgroundColor: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 13px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                  <Upload size={13} /> {isMobile ? '' : 'Import'}
+                </button>
+                <button onClick={() => setShowManage(true)}
+                  style={{ display: 'flex', alignItems: 'center', backgroundColor: '#FF453A18', color: '#FF453A', border: '1px solid #FF453A33', borderRadius: 8, padding: '8px 11px', fontSize: 16, cursor: 'pointer' }}>
+                  🗑️
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {error && <div style={{ display: 'flex', alignItems: 'center', gap: 8, backgroundColor: '#ef444420', border: '1px solid #ef444440', borderRadius: 8, padding: '9px 13px', marginBottom: 12, color: '#ef4444', fontSize: 13 }}><AlertCircle size={13} />{error}</div>}
@@ -846,7 +1028,20 @@ export default function NamenslistePage() {
           {isMobile ? (
             /* Mobile: only Name + Pipeline + Add */
             <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 6, alignItems: 'center' }}>
-              <input ref={nameRef} value={qName} onChange={e => setQName(e.target.value)} onKeyDown={e => e.key === 'Enter' && quickAdd()} placeholder="Name *" style={iStyle} />
+              <div style={{ position: 'relative' }}>
+              <input ref={nameRef} value={qName} onChange={e => onQNameChange(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { setQSuggestions([]); quickAdd() } }} onBlur={() => setTimeout(() => setQSuggestions([]), 150)} placeholder="Name *" style={iStyle} />
+              {qSuggestions.length > 0 && (
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, zIndex: 100, overflowY: 'auto', maxHeight: 220, boxShadow: '0 8px 24px #0006', marginTop: 3 }}>
+                  {qSuggestions.map(c => (
+                    <div key={c.id} onMouseDown={() => pickQSuggestion(c)}
+                      style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontWeight: 600, fontSize: 14 }}>{c.name}</span>
+                      {c.phone && <span style={{ fontSize: 12, color: '#30D158', flexShrink: 0 }}>{c.phone}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              </div>
               <select value={qPipeline} onChange={e => setQPipeline(e.target.value as typeof qPipeline)}
                 style={{ backgroundColor: 'var(--bg-hover)', border: '1px solid var(--border)', borderRadius: 7, padding: '8px 6px', color: 'var(--text-primary)', fontSize: 12, outline: 'none' }}>
                 <option value="offen">Offen</option>
@@ -858,7 +1053,20 @@ export default function NamenslistePage() {
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1.5fr 0.7fr 0.7fr auto auto', gap: 6, alignItems: 'center' }}>
-              <input ref={nameRef} value={qName} onChange={e => setQName(e.target.value)} onKeyDown={e => e.key === 'Enter' && berufRef.current?.focus()} placeholder="Name *" style={iStyle} />
+              <div style={{ position: 'relative' }}>
+              <input ref={nameRef} value={qName} onChange={e => onQNameChange(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { setQSuggestions([]); berufRef.current?.focus() } }} onBlur={() => setTimeout(() => setQSuggestions([]), 150)} placeholder="Name *" style={iStyle} />
+              {qSuggestions.length > 0 && (
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, zIndex: 100, overflowY: 'auto', maxHeight: 220, boxShadow: '0 8px 24px #0006', marginTop: 3 }}>
+                  {qSuggestions.map(c => (
+                    <div key={c.id} onMouseDown={() => pickQSuggestion(c)}
+                      style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontWeight: 600, fontSize: 14 }}>{c.name}</span>
+                      {c.phone && <span style={{ fontSize: 12, color: '#30D158', flexShrink: 0 }}>{c.phone}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              </div>
               <input ref={berufRef} value={qBeruf} onChange={e => setQBeruf(e.target.value)} onKeyDown={e => e.key === 'Enter' && phoneRef.current?.focus()} placeholder="Beruf" style={iStyle} />
               <input ref={phoneRef} value={qPhone} onChange={e => setQPhone(e.target.value)} onKeyDown={e => e.key === 'Enter' && sparRef.current?.focus()} onBlur={e => setQPhone(e.target.value.trim() ? formatDE(e.target.value.trim()) : '')} placeholder="Telefon" style={iStyle} />
               <input ref={sparRef} value={qSparsumme} onChange={e => setQSpar(e.target.value)} type="number" onKeyDown={e => e.key === 'Enter' && alterRef.current?.focus()} placeholder="€/Mon" style={iStyle} />
@@ -892,10 +1100,31 @@ export default function NamenslistePage() {
           </div>
         </div>
 
+        {/* Sort pills */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 12, overflowX: 'auto', paddingBottom: 2 }}>
+          {([
+            { key: 'neu', label: '🕐 Neu' },
+            { key: 'az',  label: 'A → Z' },
+            { key: 'za',  label: 'Z → A' },
+            { key: 'vg',  label: '📈 VG Stage' },
+            { key: 'rg',  label: '🤝 RG Stage' },
+          ] as { key: SortBy; label: string }[]).map(s => (
+            <button key={s.key} onClick={() => setSortBy(s.key)} style={{
+              flexShrink: 0, padding: '6px 13px', borderRadius: 20,
+              fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer',
+              backgroundColor: sortBy === s.key ? '#6366f1' : 'var(--bg-card)',
+              color: sortBy === s.key ? '#fff' : 'var(--text-secondary)',
+              transition: 'all 0.15s',
+            }}>
+              {s.label}
+            </button>
+          ))}
+        </div>
+
         {/* List */}
         {loading ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200, gap: 10, color: 'var(--text-secondary)' }}><Loader2 size={17} /> Lade…</div>
-        ) : filtered.length === 0 ? (
+        ) : sorted.length === 0 ? (
           <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 11, padding: 40, textAlign: 'center', color: 'var(--text-secondary)' }}>
             <div style={{ fontSize: 28, marginBottom: 10 }}>📋</div>
             <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 5 }}>Keine Kontakte</div>
@@ -904,11 +1133,31 @@ export default function NamenslistePage() {
         ) : isMobile ? (
           /* ── Mobile Card Layout ── */
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {filtered.map(c => {
+            {sorted.map(c => {
               const isSelected = selected?.id === c.id
+              const isBulkSelected = selectedIds.has(c.id)
               return (
-                <div key={c.id} onClick={() => setSelected(isSelected ? null : c)}
-                  style={{ backgroundColor: 'var(--bg-card)', border: `1px solid ${isSelected ? '#6366f1' : 'var(--border)'}`, borderRadius: 11, padding: '12px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, transition: 'border-color 0.15s' }}>
+                <SwipeableCard
+                  key={c.id}
+                  contact={c}
+                  disabled={editMode}
+                  onVGAction={() => swipeVGAction(c)}
+                  onRGAction={() => swipeRGAction(c)}
+                  onDelete={() => deleteContact(c.id)}
+                >
+                <div
+                  onClick={() => editMode ? toggleSelect(c.id) : setSelected(isSelected ? null : c)}
+                  style={{ backgroundColor: isBulkSelected ? '#1e7ef715' : isSelected ? '#1e7ef710' : 'var(--bg-card)', borderRadius: 14, padding: '13px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, transition: 'background-color 0.15s', outline: isSelected ? '1px solid #1e7ef740' : 'none' }}>
+                  {editMode && (
+                    <div style={{
+                      width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                      border: `2px solid ${isBulkSelected ? '#6366f1' : 'var(--text-tertiary)'}`,
+                      backgroundColor: isBulkSelected ? '#6366f1' : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {isBulkSelected && <span style={{ color: '#fff', fontSize: 13, fontWeight: 800, lineHeight: 1 }}>✓</span>}
+                    </div>
+                  )}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
                       {c.name}
@@ -916,41 +1165,51 @@ export default function NamenslistePage() {
                     </div>
                     {c.beruf && <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{c.beruf}</div>}
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      {!c.vg_stage && !c.rg_stage && (
-                        <span style={{ fontSize: 10, fontWeight: 700, backgroundColor: '#6b728020', color: '#6b7280', padding: '2px 7px', borderRadius: 20 }}>Offen</span>
-                      )}
-                      {c.vg_stage && (
-                        <span style={{ fontSize: 10, fontWeight: 700, backgroundColor: '#6366f120', color: '#6366f1', padding: '2px 7px', borderRadius: 20 }}>VG</span>
-                      )}
-                      {c.rg_stage && (
-                        <span style={{ fontSize: 10, fontWeight: 700, backgroundColor: '#22c55e20', color: '#22c55e', padding: '2px 7px', borderRadius: 20 }}>RG</span>
+                  {!editMode && (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        {!c.vg_stage && !c.rg_stage && (
+                          <span style={{ fontSize: 10, fontWeight: 700, backgroundColor: '#6b728020', color: '#6b7280', padding: '2px 7px', borderRadius: 20 }}>Offen</span>
+                        )}
+                        {c.vg_stage && (
+                          <span style={{ fontSize: 10, fontWeight: 700, backgroundColor: '#6366f120', color: '#6366f1', padding: '2px 7px', borderRadius: 20 }}>VG</span>
+                        )}
+                        {c.rg_stage && (
+                          <span style={{ fontSize: 10, fontWeight: 700, backgroundColor: '#22c55e20', color: '#22c55e', padding: '2px 7px', borderRadius: 20 }}>RG</span>
+                        )}
+                      </div>
+                      {c.phone && (
+                        <a href={`tel:${c.phone}`} onClick={e => e.stopPropagation()}
+                          style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '3px 7px', backgroundColor: '#3b82f620', borderRadius: 6, color: '#3b82f6', textDecoration: 'none', fontSize: 11, fontWeight: 600 }}>
+                          <Phone size={11} />
+                        </a>
                       )}
                     </div>
-                    {c.phone && (
-                      <a href={`tel:${c.phone}`} onClick={e => e.stopPropagation()}
-                        style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '3px 7px', backgroundColor: '#3b82f620', borderRadius: 6, color: '#3b82f6', textDecoration: 'none', fontSize: 11, fontWeight: 600 }}>
-                        <Phone size={11} />
-                      </a>
-                    )}
-                  </div>
+                  )}
                 </div>
+                </SwipeableCard>
               )
             })}
           </div>
         ) : (
           /* ── Desktop Grid Layout ── */
           <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 11, overflow: 'hidden' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1.4fr 1fr 1fr auto', padding: '9px 14px', borderBottom: '1px solid var(--border)', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.06em' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: editMode ? '32px 2fr 1.2fr 1.4fr 1fr 1fr auto' : '2fr 1.2fr 1.4fr 1fr 1fr auto', padding: '9px 14px', borderBottom: '1px solid var(--border)', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.06em' }}>
+              {editMode && <span></span>}
               <span>NAME</span><span>BERUF</span><span>TELEFON</span><span>PIPELINE</span><span>ORDNER</span><span></span>
             </div>
 
-            {filtered.map(c => {
+            {sorted.map(c => {
               const isSelected = selected?.id === c.id
+              const isBulkSelected = selectedIds.has(c.id)
               return (
-                <div key={c.id} onClick={() => setSelected(isSelected ? null : c)}
-                  style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1.4fr 1fr 1fr auto', padding: '11px 14px', borderBottom: '1px solid var(--border)', alignItems: 'center', fontSize: 13, cursor: 'pointer', backgroundColor: isSelected ? '#6366f108' : 'transparent', transition: 'background 0.1s' }}>
+                <div key={c.id} onClick={() => editMode ? toggleSelect(c.id) : setSelected(isSelected ? null : c)}
+                  style={{ display: 'grid', gridTemplateColumns: editMode ? '32px 2fr 1.2fr 1.4fr 1fr 1fr auto' : '2fr 1.2fr 1.4fr 1fr 1fr auto', padding: '11px 14px', borderBottom: '1px solid var(--border)', alignItems: 'center', fontSize: 13, cursor: 'pointer', backgroundColor: isBulkSelected ? '#6366f110' : isSelected ? '#6366f108' : 'transparent', transition: 'background 0.1s' }}>
+                  {editMode && (
+                    <div style={{ width: 20, height: 20, borderRadius: '50%', border: `2px solid ${isBulkSelected ? '#6366f1' : 'var(--text-tertiary)'}`, backgroundColor: isBulkSelected ? '#6366f1' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {isBulkSelected && <span style={{ color: '#fff', fontSize: 11, fontWeight: 800 }}>✓</span>}
+                    </div>
+                  )}
 
                   <div>
                     <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{c.name}</span>
@@ -1009,6 +1268,118 @@ export default function NamenslistePage() {
         />
       )}
 
+      {/* ── Bulk Action Bar ───────────────────────────────────────── */}
+      {editMode && selectedIds.size > 0 && (
+        <div style={{
+          position: 'fixed', bottom: 'calc(60px + env(safe-area-inset-bottom))', left: 0, right: 0,
+          zIndex: 150, padding: '10px 16px',
+          backgroundColor: 'rgba(28,28,30,0.96)', backdropFilter: 'blur(20px)',
+          borderTop: '0.5px solid rgba(255,255,255,0.12)',
+        }}>
+          <div style={{ maxWidth: 480, margin: '0 auto' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8, textAlign: 'center' }}>
+              {selectedIds.size} Kontakt{selectedIds.size !== 1 ? 'e' : ''} ausgewählt
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
+              <button onClick={bulkSetVG} disabled={bulkLoading}
+                style={{ backgroundColor: '#6366f120', color: '#6366f1', border: '1px solid #6366f140', borderRadius: 10, padding: '11px 6px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                📈 VG
+              </button>
+              <button onClick={bulkSetRG} disabled={bulkLoading}
+                style={{ backgroundColor: '#22c55e20', color: '#22c55e', border: '1px solid #22c55e40', borderRadius: 10, padding: '11px 6px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                🤝 RG
+              </button>
+              <button onClick={bulkClearPipeline} disabled={bulkLoading}
+                style={{ backgroundColor: '#FF9F0A20', color: '#FF9F0A', border: '1px solid #FF9F0A40', borderRadius: 10, padding: '11px 6px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                🔓 Offen
+              </button>
+              <button onClick={bulkDelete} disabled={bulkLoading}
+                style={{ backgroundColor: '#FF453A20', color: '#FF453A', border: '1px solid #FF453A40', borderRadius: 10, padding: '11px 6px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                🗑️ Löschen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Manage / Delete Modal ─────────────────────────────────── */}
+      {showManage && (
+        <div style={{ position:'fixed',inset:0,backgroundColor:'#00000088',display:'flex',alignItems:'flex-end',justifyContent:'center',zIndex:200 }}
+          onClick={e => { if (e.target===e.currentTarget) { setShowManage(false); setPendingDelete(null) } }}>
+          <div style={{ backgroundColor:'#1C1C1E',borderRadius:'20px 20px 0 0',padding:'0 0 40px',width:'100%',maxWidth:520 }}>
+            <div style={{ width:36,height:4,backgroundColor:'#3A3A3C',borderRadius:2,margin:'12px auto 0' }} />
+            <div style={{ padding:'16px 20px 4px',display:'flex',justifyContent:'space-between',alignItems:'center' }}>
+              <h2 style={{ margin:0,fontSize:18,fontWeight:800 }}>🗑️ Kontakte löschen</h2>
+              <button onClick={() => { setShowManage(false); setPendingDelete(null) }} style={{ background:'none',border:'none',cursor:'pointer',color:'var(--text-secondary)',fontSize:22,lineHeight:1 }}>×</button>
+            </div>
+
+            {/* Inline confirmation */}
+            {pendingDelete ? (
+              <div style={{ margin:'12px 16px 0' }}>
+                <div style={{ backgroundColor:'#FF453A18',border:'1px solid #FF453A44',borderRadius:14,padding:'18px 20px' }}>
+                  <div style={{ fontSize:16,fontWeight:700,color:'#FF453A',marginBottom:6 }}>
+                    ⚠️ Wirklich löschen?
+                  </div>
+                  <div style={{ fontSize:14,color:'var(--text-secondary)',marginBottom:16 }}>
+                    <strong style={{ color:'var(--text-primary)' }}>{pendingDelete.ids.length} Kontakte</strong> ({pendingDelete.label}) werden <strong>dauerhaft gelöscht</strong> und können nicht wiederhergestellt werden.
+                  </div>
+                  <div style={{ display:'flex',gap:10 }}>
+                    <button onClick={() => setPendingDelete(null)}
+                      style={{ flex:1,padding:'11px',borderRadius:10,border:'1px solid var(--border)',background:'var(--bg-hover)',color:'var(--text-primary)',fontSize:14,fontWeight:600,cursor:'pointer' }}>
+                      Abbrechen
+                    </button>
+                    <button onClick={confirmDelete} disabled={deleting}
+                      style={{ flex:1,padding:'11px',borderRadius:10,border:'none',background:'#FF453A',color:'#fff',fontSize:14,fontWeight:700,cursor:'pointer',opacity:deleting?0.6:1 }}>
+                      {deleting ? 'Löschen…' : `${pendingDelete.ids.length} löschen`}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div style={{ padding:'8px 20px 0',fontSize:12,color:'var(--text-secondary)',marginBottom:12 }}>
+                  Wähle eine Kategorie zum Löschen.
+                </div>
+                <div style={{ margin:'0 16px', backgroundColor:'var(--bg-hover)', borderRadius:14, overflow:'hidden' }}>
+                  {[
+                    { label:'Alle Kontakte',        sub:'Komplette Liste leeren',         ids: contacts.map(c=>c.id),                                     color:'#FF453A' },
+                    { label:'Offen (kein VG/RG)',   sub:'Noch nicht in der Pipeline',     ids: contacts.filter(c=>!c.vg_stage&&!c.rg_stage).map(c=>c.id), color:'#FF9F0A' },
+                    { label:'In VG Pipeline',       sub:'Alle VG-Kontakte',               ids: contacts.filter(c=>!!c.vg_stage).map(c=>c.id),              color:'#6366f1' },
+                    { label:'In RG Pipeline',       sub:'Alle RG-Kontakte',               ids: contacts.filter(c=>!!c.rg_stage).map(c=>c.id),              color:'#30D158' },
+                    { label:'VG Abgeschlossen',     sub:'Bereits abgeschlossene Kunden',  ids: contacts.filter(c=>c.vg_stage==='abgeschlossen').map(c=>c.id), color:'#8b5cf6' },
+                    { label:'RG Im Team',           sub:'Bereits eingestiegene Partner',  ids: contacts.filter(c=>c.rg_stage==='im_team').map(c=>c.id),    color:'#06b6d4' },
+                  ].map((row, i, arr) => (
+                    <div key={row.label} style={{ display:'flex',alignItems:'center',padding:'14px 16px',borderBottom: i<arr.length-1 ? '0.5px solid var(--separator)':' none' }}>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:15,fontWeight:600 }}>{row.label}</div>
+                        <div style={{ fontSize:12,color:'var(--text-secondary)',marginTop:2 }}>{row.sub}</div>
+                      </div>
+                      <div style={{ display:'flex',alignItems:'center',gap:10 }}>
+                        <span style={{ fontSize:13,fontWeight:700,color:row.ids.length?row.color:'var(--text-tertiary)',
+                          backgroundColor:row.ids.length?row.color+'20':'var(--bg-tertiary)',
+                          borderRadius:20,padding:'2px 10px' }}>
+                          {row.ids.length}
+                        </span>
+                        <button
+                          disabled={row.ids.length===0}
+                          onClick={() => setPendingDelete({ ids: row.ids, label: row.label })}
+                          style={{ backgroundColor:row.ids.length?'#FF453A20':'var(--bg-tertiary)',
+                            color:row.ids.length?'#FF453A':'var(--text-tertiary)',
+                            border:`1px solid ${row.ids.length?'#FF453A40':'transparent'}`,
+                            borderRadius:8,padding:'6px 13px',fontSize:12,fontWeight:700,
+                            cursor:row.ids.length?'pointer':'default' }}>
+                          Löschen
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── Import Modal ──────────────────────────────────────────── */}
       {showImport && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: '#00000088', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}
@@ -1019,67 +1390,20 @@ export default function NamenslistePage() {
               <button onClick={() => { setShowImport(false); setVcfPreview([]) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={18} /></button>
             </div>
 
-            <div style={{ display: 'flex', backgroundColor: 'var(--bg-hover)', borderRadius: 9, padding: 3, marginBottom: 16, gap: 3 }}>
-              {(['vcf', 'text'] as const).map(t => (
-                <button key={t} onClick={() => { setImportTab(t); setVcfPreview([]) }}
-                  style={{ flex: 1, padding: '8px', borderRadius: 7, border: 'none', fontWeight: 700, fontSize: 13, cursor: 'pointer', backgroundColor: importTab === t ? 'var(--bg-card)' : 'transparent', color: importTab === t ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
-                  {t === 'vcf' ? '📱 iOS / Mac / Android (.vcf)' : '📋 Text-Liste'}
-                </button>
-              ))}
-            </div>
-
-            {importTab === 'vcf' ? (
-              <div>
-                <div style={{ backgroundColor: '#6366f110', border: '1px solid #6366f130', borderRadius: 10, padding: '12px 14px', marginBottom: 14, fontSize: 12 }}>
-                  <div style={{ fontWeight: 700, marginBottom: 6, color: '#6366f1' }}>So exportierst du deine Kontakte:</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: 10 }}>
-                    {[
-                      { os: '🍎 iPhone', steps: 'Kontakte App → Kontakt → Teilen → AirDrop/Datei → .vcf' },
-                      { os: '🖥 Mac', steps: 'Kontakte App → Auswählen → Ablage → Exportieren → vCard' },
-                      { os: '🤖 Android', steps: 'Kontakte App → Menü → Import/Export → Als .vcf exportieren' },
-                    ].map(p => (
-                      <div key={p.os}>
-                        <div style={{ fontWeight: 700, marginBottom: 3 }}>{p.os}</div>
-                        <div style={{ color: 'var(--text-secondary)', lineHeight: 1.4 }}>{p.steps}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {vcfPreview.length === 0 ? (
-                  <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '2px dashed var(--border)', borderRadius: 10, padding: '32px', cursor: 'pointer', gap: 10 }}>
-                    <div style={{ fontSize: 36 }}>📂</div>
-                    <div style={{ fontWeight: 700, fontSize: 14 }}>.vcf Datei auswählen</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Klick hier oder Datei hierher ziehen</div>
-                    <input type="file" accept=".vcf,text/vcard" onChange={handleVcfFile} style={{ display: 'none' }} />
-                  </label>
-                ) : (
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, color: '#22c55e' }}>✅ {vcfPreview.length} Kontakte erkannt</div>
-                    <div style={{ maxHeight: 200, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
-                      {vcfPreview.slice(0, 50).map((c, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderBottom: '1px solid var(--border)', fontSize: 12 }}>
-                          <span style={{ fontWeight: 600, flex: 1 }}>{c.name}</span>
-                          {c.phone && <span style={{ color: '#22c55e' }}>📞 {c.phone}</span>}
-                          {c.beruf && <span style={{ color: 'var(--text-secondary)' }}>{c.beruf}</span>}
-                        </div>
-                      ))}
-                      {vcfPreview.length > 50 && <div style={{ padding: '8px 12px', fontSize: 12, color: 'var(--text-secondary)' }}>… und {vcfPreview.length - 50} weitere</div>}
-                    </div>
-                    <button onClick={() => setVcfPreview([])} style={{ marginTop: 8, fontSize: 12, color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Andere Datei wählen</button>
-                  </div>
-                )}
-
-                <div style={{ display: 'flex', gap: 9, marginTop: 14 }}>
-                  <button onClick={() => { setShowImport(false); setVcfPreview([]) }} style={{ flex: 1, backgroundColor: 'var(--bg-hover)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Abbrechen</button>
-                  <button onClick={importVcf} disabled={importing || vcfPreview.length === 0}
-                    style={{ flex: 2, backgroundColor: importing || !vcfPreview.length ? 'var(--bg-hover)' : '#6366f1', color: importing || !vcfPreview.length ? 'var(--text-secondary)' : '#fff', border: 'none', borderRadius: 8, padding: '10px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                    {importing ? 'Importiere…' : `${vcfPreview.length} Kontakte importieren`}
-                  </button>
-                </div>
+            {/* VCF → Kontaktliste banner */}
+            <a href="/dashboard/kontakte" onClick={() => setShowImport(false)}
+              style={{ display: 'flex', alignItems: 'center', gap: 14, backgroundColor: '#6366f115', border: '1px solid #6366f140', borderRadius: 12, padding: '14px 16px', marginBottom: 16, textDecoration: 'none', cursor: 'pointer' }}>
+              <div style={{ fontSize: 28, flexShrink: 0 }}>📱</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>iPhone / Android Kontakte importieren</div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Gehe zur Kontaktliste → VCF Import → Von dort als Potenzial hinzufügen</div>
               </div>
-            ) : (
-              <div>
+              <ChevronRight size={18} color="#6366f1" />
+            </a>
+
+            {/* Text import only */}
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.06em', marginBottom: 10 }}>📋 NAMEN DIREKT EINGEBEN</div>
+            <div>
                 <div style={{ fontSize: 12, color: 'var(--text-secondary)', backgroundColor: 'var(--bg-hover)', borderRadius: 8, padding: '9px 13px', marginBottom: 13 }}>
                   Ein Name pro Zeile · optional: Name, Beruf, Telefon, €/Mon, Alter<br />
                   <code style={{ color: '#6366f1' }}>Max Mustermann, Arzt, 01512345678, 300, 35</code>
@@ -1094,11 +1418,165 @@ export default function NamenslistePage() {
                     {importing ? 'Importiere…' : 'Importieren'}
                   </button>
                 </div>
-              </div>
-            )}
+            </div>
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ─── SwipeableCard — iOS Mail style ──────────────────────────────────────────
+// Links-swipe  → Löschen (rot)
+// Rechts-swipe → VG · RG zuweisen (blau · grün)
+function SwipeableCard({
+  children, contact, onVGAction, onRGAction, onDelete, disabled,
+}: {
+  children:   React.ReactNode
+  contact:    Contact
+  onVGAction: () => void
+  onRGAction: () => void
+  onDelete:   () => void
+  disabled?:  boolean
+}) {
+  const BTN_W   = 72   // width of each action button
+  const L_TOTAL = BTN_W        // left reveal = delete only
+  const R_TOTAL = BTN_W * 2   // right reveal = VG + RG
+
+  const [offset,    setOffsetState] = useState(0)
+  const [animating, setAnimating]   = useState(false)
+  const liveOffset = useRef(0)
+  const startX     = useRef(0)
+  const startY     = useRef(0)
+  const startOff   = useRef(0)
+  const touching   = useRef(false)
+  const direction  = useRef<'h' | 'v' | null>(null)
+
+  function setOffset(v: number) { liveOffset.current = v; setOffsetState(v) }
+  function close() { setAnimating(true); setOffset(0) }
+
+  const vgDone = contact.vg_stage === VG_STAGES[VG_STAGES.length - 1].id
+  const rgDone = contact.rg_stage === RG_STAGES[RG_STAGES.length - 1].id
+
+  const vgLabel = (() => {
+    if (!contact.vg_stage) return 'VG'
+    const idx = VG_STAGES.findIndex(s => s.id === contact.vg_stage)
+    if (idx >= VG_STAGES.length - 1) return '✓ VG'
+    return VG_STAGES[idx + 1].label.slice(0, 7)
+  })()
+  const rgLabel = (() => {
+    if (!contact.rg_stage) return 'RG'
+    const idx = RG_STAGES.findIndex(s => s.id === contact.rg_stage)
+    if (idx >= RG_STAGES.length - 1) return '✓ RG'
+    return RG_STAGES[idx + 1].label.slice(0, 7)
+  })()
+
+  function handleTouchStart(e: React.TouchEvent) {
+    if (disabled) return
+    touching.current  = true
+    direction.current = null
+    startX.current    = e.touches[0].clientX
+    startY.current    = e.touches[0].clientY
+    startOff.current  = liveOffset.current
+    setAnimating(false)
+  }
+
+  function handleTouchMove(e: React.TouchEvent) {
+    if (!touching.current || disabled) return
+    const dx = e.touches[0].clientX - startX.current
+    const dy = e.touches[0].clientY - startY.current
+
+    if (!direction.current) {
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return
+      direction.current = Math.abs(dx) > Math.abs(dy) * 1.4 ? 'h' : 'v'
+    }
+    if (direction.current === 'v') return
+
+    const raw = startOff.current + dx
+    setOffset(Math.min(R_TOTAL, Math.max(-L_TOTAL, raw)))
+  }
+
+  function handleTouchEnd() {
+    if (!touching.current) return
+    touching.current = false
+    if (direction.current !== 'h') return
+    setAnimating(true)
+    const cur = liveOffset.current
+    if      (cur >  R_TOTAL * 0.4) setOffset(R_TOTAL)
+    else if (cur < -L_TOTAL * 0.4) setOffset(-L_TOTAL)
+    else                            setOffset(0)
+  }
+
+  const effectiveOffset = disabled ? 0 : offset
+
+  const actionBtn: React.CSSProperties = {
+    width: BTN_W, height: '100%', border: 'none', cursor: 'pointer',
+    display: 'flex', flexDirection: 'column',
+    alignItems: 'center', justifyContent: 'center', gap: 4,
+    color: '#fff', fontSize: 10, fontWeight: 700,
+    letterSpacing: '0.02em',
+  }
+
+  return (
+    <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 14 }}>
+
+      {!disabled && (<>
+
+        {/* ── RIGHT side: VG + RG (revealed on RIGHT swipe) ── */}
+        <div style={{
+          position: 'absolute', left: 0, top: 0, bottom: 0,
+          width: R_TOTAL, display: 'flex', borderRadius: '14px 0 0 14px', overflow: 'hidden',
+        }}>
+          <button
+            style={{ ...actionBtn, backgroundColor: vgDone ? '#374151' : '#6366f1' }}
+            onTouchEnd={e => { e.stopPropagation(); if (!vgDone) { onVGAction(); close() } }}
+            onClick={() => { if (!vgDone) { onVGAction(); close() } }}
+          >
+            <TrendingUp size={18} color="#fff" strokeWidth={2} />
+            <span>{vgLabel}</span>
+          </button>
+          <button
+            style={{ ...actionBtn, backgroundColor: rgDone ? '#374151' : '#22c55e' }}
+            onTouchEnd={e => { e.stopPropagation(); if (!rgDone) { onRGAction(); close() } }}
+            onClick={() => { if (!rgDone) { onRGAction(); close() } }}
+          >
+            <Users size={18} color="#fff" strokeWidth={2} />
+            <span>{rgLabel}</span>
+          </button>
+        </div>
+
+        {/* ── LEFT side: Löschen (revealed on LEFT swipe) ── */}
+        <div style={{
+          position: 'absolute', right: 0, top: 0, bottom: 0,
+          width: L_TOTAL, borderRadius: '0 14px 14px 0', overflow: 'hidden',
+        }}>
+          <button
+            style={{ ...actionBtn, width: '100%', backgroundColor: '#ef4444' }}
+            onTouchEnd={e => { e.stopPropagation(); onDelete(); close() }}
+            onClick={() => { onDelete(); close() }}
+          >
+            <Trash2 size={18} color="#fff" strokeWidth={2} />
+            <span>Löschen</span>
+          </button>
+        </div>
+
+      </>)}
+
+      {/* Sliding card */}
+      <div
+        onTouchStart={disabled ? undefined : handleTouchStart}
+        onTouchMove={disabled ? undefined : handleTouchMove}
+        onTouchEnd={disabled ? undefined : handleTouchEnd}
+        style={{
+          transform: `translateX(${effectiveOffset}px)`,
+          transition: animating && !disabled
+            ? 'transform 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+            : 'none',
+          position: 'relative', zIndex: 1, willChange: 'transform',
+        }}
+      >
+        {children}
+      </div>
     </div>
   )
 }

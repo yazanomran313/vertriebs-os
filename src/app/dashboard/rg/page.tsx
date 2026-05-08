@@ -57,7 +57,7 @@ export default function RGPage() {
 
   const loadPartners = useCallback(async () => {
     setLoading(true); setError('')
-    const { data, error: err } = await supabase.from('contacts').select('*').not('rg_stage', 'is', null).order('created_at', { ascending: false })
+    const { data, error: err } = await supabase.from('contacts').select('id,name,beruf,phone,source,stage,rg_stage,pipeline,notes,created_at,last_contact').not('rg_stage', 'is', null).order('created_at', { ascending: false })
     if (err) setError('Fehler beim Laden: ' + err.message)
     else setPartners((data || []) as Partner[])
     setLoading(false)
@@ -197,14 +197,15 @@ export default function RGPage() {
         ) : (
           <div style={{ maxHeight: 260, overflowY: 'auto' }}>
             {namensliste.map(p => (
-              <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 20px', borderBottom: '1px solid var(--border)' }}>
-                <div style={{ flex: 1 }}>
+              <div key={p.id} onClick={() => setSelected(p)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 20px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ fontWeight: 600, fontSize: 13 }}>{p.name}</span>
                   {p.beruf && <span style={{ fontSize: 12, color: 'var(--text-secondary)', marginLeft: 8 }}>{p.beruf}</span>}
                 </div>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button onClick={() => setSelected(p)} style={{ fontSize: 11, backgroundColor: 'var(--bg-hover)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', color: 'var(--text-secondary)' }}>Details</button>
-                  <button onClick={() => moveStage(p.id, 'partnerpotenzial')} style={{ fontSize: 11, backgroundColor: '#22c55e20', border: '1px solid #22c55e40', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', color: '#22c55e', fontWeight: 600 }}>→ Potenzial</button>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <button onClick={e => { e.stopPropagation(); moveStage(p.id, 'partnerpotenzial') }} style={{ fontSize: 11, backgroundColor: '#22c55e20', border: '1px solid #22c55e40', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', color: '#22c55e', fontWeight: 600 }}>→ Potenzial</button>
+                  <ChevronRight size={13} color="var(--text-tertiary)" />
                 </div>
               </div>
             ))}

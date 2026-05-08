@@ -4,8 +4,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import {
-  LayoutDashboard, TrendingUp, Users, BarChart3, Bot, List, GitBranch,
-  Phone, Film, Flame, UserPlus, LogOut,
+  LayoutDashboard, TrendingUp, Users, List, GitBranch,
+  Phone, UserPlus, LogOut, BookUser,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -19,6 +19,7 @@ const navGroups = [
   {
     label: 'KONTAKTE',
     items: [
+      { href: '/dashboard/kontakte',    label: 'Kontaktliste',    icon: BookUser },
       { href: '/dashboard/namensliste', label: 'Namensliste',     icon: List },
       { href: '/dashboard/vg',          label: 'VG — Kunden',     icon: TrendingUp },
       { href: '/dashboard/rg',          label: 'RG — Rekrutierung',icon: Users },
@@ -27,22 +28,15 @@ const navGroups = [
   {
     label: 'TRACKING',
     items: [
-      { href: '/dashboard/calls',       label: 'Anrufe',          icon: Phone },
-      { href: '/dashboard/habits',      label: 'Habits',          icon: Flame },
+      { href: '/dashboard/ttv',   label: 'TTV Kalender', icon: Phone },
+      { href: '/dashboard/calls', label: 'Anrufe',      icon: Phone },
     ],
   },
   {
-    label: 'CONTENT',
+    label: 'TOOLS',
     items: [
-      { href: '/dashboard/content-studio', label: 'Content Studio', icon: Film },
-    ],
-  },
-  {
-    label: 'ANALYSE & TOOLS',
-    items: [
-      { href: '/dashboard/kunden-avatar', label: 'Kunden-Avatar',  icon: Users },
-      { href: '/dashboard/kpi',           label: 'KPIs',            icon: BarChart3 },
-      { href: '/dashboard/ai-team',       label: 'KI-Analyse',      icon: Bot },
+      { href: '/dashboard/tools',          label: 'Tools',         icon: Users },
+      { href: '/dashboard/kunden-avatar',  label: 'Kunden-Avatar', icon: Users },
     ],
   },
   {

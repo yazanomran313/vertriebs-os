@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 
-// || fängt auch leere Strings ab (anders als ??)
-const API_KEY = process.env.ANTHROPIC_API_KEY || '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'
-
-const client = new Anthropic({ apiKey: API_KEY })
-
 const SYSTEM_PROMPT = `Du bist ein erfahrener Vertriebscoach und Finanzberater-Mentor im Bereich Altersvorsorge, Versicherungen und Immobilien. Du arbeitest mit einem ambitionierten Finanzberater (Yazan Omran) zusammen, der ein Team aufbaut und seine Pipeline skalieren will.
 
 Dein Wissen umfasst:
@@ -22,6 +17,10 @@ Antworte immer auf Deutsch. Sei konkret, direkt und praxisorientiert. Nutze kurz
 
 export async function POST(req: NextRequest) {
   try {
+    const API_KEY = process.env.ANTHROPIC_API_KEY
+    if (!API_KEY) return NextResponse.json({ error: 'KI nicht konfiguriert.' }, { status: 500 })
+    const client = new Anthropic({ apiKey: API_KEY })
+
     const body = await req.json()
     const { messages, context } = body
 
@@ -35,7 +34,7 @@ export async function POST(req: NextRequest) {
     }
 
     const response = await client.messages.create({
-      model: 'claude-opus-4-5',
+      model: 'claude-haiku-4-5',
       max_tokens: 1024,
       system: SYSTEM_PROMPT,
       messages: anthropicMessages,
