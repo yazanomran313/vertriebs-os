@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Plus, X, ChevronRight, Loader2, AlertCircle, Pencil, Check, Phone, MessageCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { VG_STAGES, calcEinheiten, calcLaufzeit } from '@/lib/ergo'
+import ClientAnalysis from '@/components/ClientAnalysis'
 
 type VGStage = 'kundenpotenzial' | 'vorqualifiziert' | 'beraten' | 'abgeschlossen'
 
@@ -51,6 +52,7 @@ export default function VGPage() {
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({ name: '', beruf: '', phone: '', source: 'Instagram', sparsumme: '', alter_jahre: '', notes: '' })
   const [activeMobileStage, setActiveMobileStage] = useState<string>('kundenpotenzial')
+  const [showAnalysis, setShowAnalysis] = useState(false)
 
   // Namensliste Schnelleintrag
   const [qName, setQName] = useState('')
@@ -353,6 +355,11 @@ export default function VGPage() {
         </div>
       )}
 
+      {/* ── KI-Analyse Modal ── */}
+      {showAnalysis && selected && (
+        <ClientAnalysis contact={selected} onClose={() => setShowAnalysis(false)} />
+      )}
+
       {/* ── DETAIL PANEL ── */}
       {selected && (
         <div style={isMobile
@@ -376,7 +383,7 @@ export default function VGPage() {
                   style={{ display: 'flex', alignItems: 'center', gap: 5, backgroundColor: editing ? '#22c55e' : '#6366f115', color: editing ? '#fff' : '#6366f1', border: `1px solid ${editing ? '#22c55e' : '#6366f130'}`, borderRadius: 7, padding: '6px 11px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                   {editing ? <><Check size={12} /> Speichern</> : <><Pencil size={12} /> Bearbeiten</>}
                 </button>
-                <button onClick={() => { setSelected(null); setEditing(false) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4 }}><X size={18} /></button>
+                <button onClick={() => { setSelected(null); setEditing(false); setShowAnalysis(false) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4 }}><X size={18} /></button>
               </div>
             </div>
           </div>
@@ -427,6 +434,13 @@ export default function VGPage() {
                 )}
               </>
             )}
+
+            {/* KI-Analyse */}
+            <button
+              onClick={() => setShowAnalysis(true)}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#6366f115', border: '1px solid #6366f130', color: '#6366f1', borderRadius: 10, padding: '11px', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 16 }}>
+              ✨ KI-Analyse
+            </button>
 
             {/* Stage */}
             <div style={{ marginBottom: 16 }}>

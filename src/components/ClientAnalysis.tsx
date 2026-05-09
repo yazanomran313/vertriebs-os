@@ -201,7 +201,7 @@ export default function ClientAnalysis({ contact, onClose }: Props) {
   return (
     <div
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
-      style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(6px)', zIndex: 300, display: 'flex', alignItems: 'flex-end' }}
+      style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(6px)', zIndex: 400, display: 'flex', alignItems: 'flex-end' }}
     >
       <div style={{ backgroundColor: '#1C1C1E', borderRadius: '22px 22px 0 0', width: '100%', maxWidth: 600, margin: '0 auto', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
 
