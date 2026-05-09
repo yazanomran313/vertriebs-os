@@ -71,7 +71,7 @@ export default function VGPage() {
     const { data, error: err } = await supabase
       .from('contacts')
       .select('*')
-      .not('vg_stage', 'is', null)
+      .or('vg_stage.not.is.null,stage.eq.namensliste')
       .order('created_at', { ascending: false })
     if (err) setError('Fehler beim Laden: ' + err.message)
     else setContacts((data || []) as Contact[])
@@ -173,8 +173,8 @@ export default function VGPage() {
     setEditing(false)
   }
 
-  const namensliste: Contact[] = []
-  const pipeline = contacts
+  const namensliste = contacts.filter(c => c.stage === 'namensliste' && !c.vg_stage)
+  const pipeline = contacts.filter(c => c.vg_stage !== null)
   const abgE = pipeline.filter(c => c.stage === 'abgeschlossen').reduce((s, c) => s + (c.einheiten || 0), 0)
   const offenE = pipeline.filter(c => c.stage !== 'abgeschlossen').reduce((s, c) => s + (c.einheiten || 0), 0)
   const pv = preview(form.sparsumme, form.alter_jahre)

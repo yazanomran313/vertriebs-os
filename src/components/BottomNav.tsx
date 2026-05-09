@@ -4,17 +4,16 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import {
-  BarChart2, Wrench, CalendarDays, AlignJustify,
+  BarChart2, Wrench, AlignJustify,
   BookUser, Users, List, TrendingUp,
   Phone, GitBranch, UserPlus, ChevronRight, LogOut, X,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
-/* ── Tab definitionen (wie FTMO: Accounts · Tools · Calendar · Menu) ── */
 const primaryNav = [
-  { href: '/dashboard',      label: 'Übersicht', icon: BarChart2    },
-  { href: '/dashboard/tools', label: 'Tools',     icon: Wrench       },
-  { href: '/dashboard/ttv',  label: 'Kalender',  icon: CalendarDays },
+  { href: '/dashboard',     label: 'Übersicht', icon: BarChart2  },
+  { href: '/dashboard/ttv', label: 'TTV',        icon: Phone      },
+  { href: '/dashboard/vg',  label: 'VG',         icon: TrendingUp },
 ]
 
 const menuGroups = [
@@ -23,14 +22,14 @@ const menuGroups = [
     items: [
       { href: '/dashboard/kontakte',    label: 'Kontaktliste',      icon: BookUser  },
       { href: '/dashboard/namensliste', label: 'Namensliste',       icon: List      },
-      { href: '/dashboard/vg',          label: 'VG — Kunden',       icon: TrendingUp},
       { href: '/dashboard/rg',          label: 'RG — Rekrutierung', icon: Users     },
     ],
   },
   {
     label: 'TRACKING',
     items: [
-      { href: '/dashboard/calls', label: 'Anrufe',  icon: Phone },
+      { href: '/dashboard/calls',  label: 'Anrufe', icon: Phone  },
+      { href: '/dashboard/tools',  label: 'Tools',  icon: Wrench },
     ],
   },
   {
@@ -80,7 +79,7 @@ export default function BottomNav() {
 
   return (
     <>
-      {/* ── Backdrop ── */}
+      {/* Backdrop */}
       {menuOpen && (
         <div
           onClick={() => setMenuOpen(false)}
@@ -94,7 +93,7 @@ export default function BottomNav() {
         />
       )}
 
-      {/* ── Menu Drawer — FTMO-Style ── */}
+      {/* Menu Drawer */}
       <div style={{
         position: 'fixed',
         left: 0, right: 0,
@@ -219,20 +218,16 @@ export default function BottomNav() {
         </div>
       </div>
 
-      {/* ══════════════════════════════════════════════════
-          FTMO Bottom Tab Bar
-          ══════════════════════════════════════════════════ */}
+      {/* Bottom Tab Bar */}
       <nav style={{
         position: 'fixed',
         bottom: 0, left: 0, right: 0,
-        /* FTMO: solid dark navy — no blur, no border */
         backgroundColor: '#090d17',
         display: 'flex',
         alignItems: 'stretch',
         zIndex: 100,
         paddingBottom: 'env(safe-area-inset-bottom)',
         height: 'calc(78px + env(safe-area-inset-bottom))',
-        /* subtle top separator — barely visible */
         borderTop: '0.5px solid rgba(255,255,255,0.06)',
       }}>
 
@@ -253,7 +248,6 @@ export default function BottomNav() {
                 display: 'flex', flexDirection: 'column',
                 alignItems: 'center', justifyContent: 'center',
                 gap: 5, textDecoration: 'none',
-                /* FTMO: active = white, inactive = muted gray */
                 color: isActive ? '#ffffff' : '#4a5568',
                 transition: 'color 0.15s',
               }}

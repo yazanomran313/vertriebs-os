@@ -3,9 +3,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getCurrentProduktionsmonat, formatCountdown } from '@/lib/ergo'
-import { AlertTriangle, ChevronRight, Flame, Plus, Phone, MessageSquare, Bell } from 'lucide-react'
+import { AlertTriangle, ChevronRight, Flame, Plus, Phone, MessageSquare, Bell, BellOff, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import ClientAnalysis from '@/components/ClientAnalysis'
 
 /* ─── Types ─── */
 interface Entry { id: string; status: string }
@@ -14,7 +15,7 @@ interface TSession {
   ttv_entries: Entry[]
 }
 interface Contact {
-  id: string; name: string; phone: string | null
+  id: string; name: string; phone: string | null; beruf?: string | null
   vg_stage: string | null; rg_stage: string | null
   last_contact: string | null; created_at: string
 }
@@ -52,6 +53,21 @@ function getWeekDays(): string[] {
     const d = new Date(mon); d.setDate(mon.getDate() + i)
     return d.toISOString().split('T')[0]
   })
+}
+
+function addDays(n: number): string {
+  const d = new Date(); d.setDate(d.getDate() + n)
+  return d.toISOString().split('T')[0]
+}
+
+function fmtCallback(iso: string) {
+  const d = new Date(iso + 'T12:00:00')
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const diff = Math.round((d.setHours(0, 0, 0, 0) - today.getTime()) / 86400000)
+  if (diff === 0) return 'Heute'
+  if (diff === 1) return 'Morgen'
+  if (diff < 0) return `${Math.abs(diff)}T überfällig`
+  return new Date(iso + 'T12:00:00').toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })
 }
 
 /* ─── Ring component ─── */
@@ -96,11 +112,34 @@ export default function HeutePage() {
   const [countdown, setCountdown]     = useState({ text: '…', status: 'normal' as 'normal' | 'today' | 'critical' })
   const pm = getCurrentProduktionsmonat()
 
+  // Callback management
+  const [callbacks, setCallbacksState] = useState<Record<string, string>>({})
+  const [callbackPickerId, setCallbackPickerId] = useState<string | null>(null)
+
+  // KI-Analyse
+  const [analysisContact, setAnalysisContact] = useState<{ id: string; name: string; beruf?: string | null } | null>(null)
+
+  useEffect(() => {
+    try {
+      setCallbacksState(JSON.parse(localStorage.getItem('callbacks') || '{}'))
+    } catch { /* empty */ }
+  }, [])
+
+  function setCallback(key: string, isoDate: string | null) {
+    setCallbacksState(prev => {
+      const next = { ...prev }
+      if (isoDate) next[key] = isoDate; else delete next[key]
+      localStorage.setItem('callbacks', JSON.stringify(next))
+      return next
+    })
+    setCallbackPickerId(null)
+  }
+
   const load = useCallback(async () => {
     const [{ data: { user } }, { data: sessData }, { data: cData }] = await Promise.all([
       supabase.auth.getUser(),
       supabase.from('ttv_sessions').select('*, ttv_entries(id, status)').order('date', { ascending: false }),
-      supabase.from('contacts').select('id,name,phone,vg_stage,rg_stage,last_contact,created_at'),
+      supabase.from('contacts').select('id,name,phone,beruf,vg_stage,rg_stage,last_contact,created_at'),
     ])
     if (user) {
       const { data: p } = await supabase.from('profiles').select('name').eq('id', user.id).single()
@@ -135,22 +174,15 @@ export default function HeutePage() {
   const weekTermine= weekSessions.reduce((s, w) => s + (w ? sessionStats(w).termine : 0), 0)
   const weekGoals  = weekSessions.filter(w => w && sessionStats(w).goalHit).length
 
-  // ── Smart call list ──────────────────────────────────────────────────────
-  function getCallbacks(): Record<string, string> {
-    try { return JSON.parse(localStorage.getItem('callbacks') || '{}') } catch { return {} }
-  }
-  const callbacks = typeof window !== 'undefined' ? getCallbacks() : {}
-
-  const activeContacts = contacts.filter(c => c.vg_stage || c.rg_stage)
+  // Smart call list
   const todayStr = today
+  const activeContacts = contacts.filter(c => c.vg_stage || c.rg_stage)
 
-  // Priority 1: scheduled callback overdue or today
   const callbackDue = activeContacts.filter(c => {
     const cb = callbacks[c.id]
     return cb && cb <= todayStr
   }).map(c => ({ ...c, reason: callbacks[c.id] < todayStr ? 'Überfälliger Rückruf' : 'Rückruf heute', priority: 0, days: Math.floor((Date.now() - new Date(callbacks[c.id]).getTime()) / 86400000) }))
 
-  // Priority 2: active contacts not reached in 5+ days
   const coldPipeline = activeContacts
     .filter(c => !callbacks[c.id] || callbacks[c.id] > todayStr)
     .map(c => {
@@ -176,7 +208,12 @@ export default function HeutePage() {
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 16px 100px' }}>
 
-      {/* ── FTMO-Style Page Header ── */}
+      {/* KI-Analyse Modal */}
+      {analysisContact && (
+        <ClientAnalysis contact={analysisContact} onClose={() => setAnalysisContact(null)} />
+      )}
+
+      {/* Page Header */}
       <div style={{ padding: '20px 0 22px' }}>
         <p style={{ color: 'var(--text-secondary)', fontSize: 13, margin: '0 0 4px', fontWeight: 500 }}>{dateLabel}</p>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -196,7 +233,7 @@ export default function HeutePage() {
         </div>
       </div>
 
-      {/* ── TTV TODAY CARD ── */}
+      {/* TTV TODAY CARD */}
       <Link href="/dashboard/ttv" style={{ textDecoration: 'none', display: 'block', marginBottom: 10 }}>
         <div style={{
           backgroundColor: 'var(--bg-card)',
@@ -241,7 +278,7 @@ export default function HeutePage() {
         </div>
       </Link>
 
-      {/* ── DIESE WOCHE ── */}
+      {/* DIESE WOCHE */}
       <Link href="/dashboard/ttv" style={{ textDecoration: 'none', display: 'block', marginBottom: 10 }}>
       <div style={{
         backgroundColor: 'var(--bg-card)',
@@ -300,7 +337,7 @@ export default function HeutePage() {
       </div>
       </Link>
 
-      {/* ── QUICK ACTIONS ── */}
+      {/* QUICK ACTIONS */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
         <Link href="/dashboard/ttv" style={{ textDecoration: 'none' }}>
           <div style={{
@@ -316,16 +353,16 @@ export default function HeutePage() {
             </div>
           </div>
         </Link>
-        <Link href="/dashboard/pipeline" style={{ textDecoration: 'none' }}>
+        <Link href="/dashboard/vg" style={{ textDecoration: 'none' }}>
           <div style={{
             backgroundColor: 'var(--bg-card)',
             borderRadius: 16, padding: '16px', display: 'flex', alignItems: 'center', gap: 12, minHeight: 72,
           }}>
-            <div style={{ backgroundColor: 'rgba(34,197,94,0.12)', borderRadius: 11, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <div style={{ backgroundColor: 'rgba(99,102,241,0.12)', borderRadius: 11, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <span style={{ fontSize: 18 }}>📈</span>
             </div>
             <div>
-              <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.2 }}>Pipeline</div>
+              <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.2 }}>VG Pipeline</div>
               <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
                 {contacts.filter(c => c.vg_stage && c.vg_stage !== 'abgeschlossen').length} aktiv
               </div>
@@ -334,7 +371,7 @@ export default function HeutePage() {
         </Link>
       </div>
 
-      {/* ── P-SCHLUSS ── */}
+      {/* P-SCHLUSS */}
       <div style={{
         backgroundColor: 'var(--bg-card)',
         borderRadius: 16, padding: '14px 18px', marginBottom: 10,
@@ -358,7 +395,7 @@ export default function HeutePage() {
         </div>
       </div>
 
-      {/* ── HEUTE ANRUFEN ── */}
+      {/* HEUTE ANRUFEN */}
       {callList.length > 0 && (
         <div style={{ marginBottom: 10 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, padding: '0 2px' }}>
@@ -373,42 +410,103 @@ export default function HeutePage() {
             {callList.map((c, i) => {
               const isCallback = c.priority === 0
               const accentColor = isCallback ? '#FF453A' : '#FF9F0A'
+              const callbackDate = callbacks[c.id]
+              const isPicking = callbackPickerId === c.id
+
               return (
-                <div key={c.id} style={{
-                  display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
-                  borderBottom: i < callList.length - 1 ? '0.5px solid var(--border)' : 'none',
-                }}>
-                  {/* Icon */}
-                  <div style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: accentColor + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    {isCallback ? <Bell size={15} color={accentColor} /> : <AlertTriangle size={15} color={accentColor} />}
-                  </div>
-
-                  {/* Name + reason */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>
-                    <div style={{ fontSize: 11, color: accentColor, marginTop: 1, fontWeight: isCallback ? 700 : 400 }}>{c.reason}</div>
-                  </div>
-
-                  {/* Quick actions */}
-                  {c.phone ? (
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <a href={`tel:${c.phone}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, backgroundColor: '#30D15818', textDecoration: 'none' }}>
-                        <Phone size={15} color="#30D158" />
-                      </a>
-                      <a href={`https://wa.me/${c.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, backgroundColor: '#6366f118', textDecoration: 'none' }}>
-                        <MessageSquare size={15} color="#6366f1" />
-                      </a>
+                <div key={c.id}>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
+                    borderBottom: (i < callList.length - 1 && !isPicking) ? '0.5px solid var(--border)' : 'none',
+                  }}>
+                    {/* Icon */}
+                    <div style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: accentColor + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {isCallback ? <Bell size={15} color={accentColor} /> : <AlertTriangle size={15} color={accentColor} />}
                     </div>
-                  ) : (
-                    <Link href="/dashboard/namensliste" style={{ textDecoration: 'none' }}>
-                      <ChevronRight size={16} color="var(--text-tertiary)" />
-                    </Link>
+
+                    {/* Name + reason */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>
+                      <div style={{ fontSize: 11, color: accentColor, marginTop: 1, fontWeight: isCallback ? 700 : 400 }}>{c.reason}</div>
+                    </div>
+
+                    {/* Quick actions */}
+                    <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+                      {/* KI-Analyse */}
+                      <button
+                        onClick={() => setAnalysisContact({ id: c.id, name: c.name, beruf: c.beruf })}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, backgroundColor: '#6366f118', border: 'none', cursor: 'pointer' }}
+                        title="KI-Analyse"
+                      >
+                        <Sparkles size={14} color="#6366f1" />
+                      </button>
+                      {/* Rückruf */}
+                      <button
+                        onClick={() => setCallbackPickerId(isPicking ? null : c.id)}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, backgroundColor: callbackDate ? '#f59e0b20' : 'rgba(255,255,255,0.05)', border: 'none', cursor: 'pointer' }}
+                        title="Rückruf setzen"
+                      >
+                        {callbackDate
+                          ? <Bell size={14} color="#f59e0b" />
+                          : <BellOff size={14} color="var(--text-tertiary)" />}
+                      </button>
+                      {/* Call / WA */}
+                      {c.phone ? (
+                        <>
+                          <a href={`tel:${c.phone}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, backgroundColor: '#30D15818', textDecoration: 'none' }}>
+                            <Phone size={15} color="#30D158" />
+                          </a>
+                          <a href={`https://wa.me/${c.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, backgroundColor: '#25d36618', textDecoration: 'none' }}>
+                            <MessageSquare size={15} color="#25D366" />
+                          </a>
+                        </>
+                      ) : (
+                        <Link href="/dashboard/vg" style={{ textDecoration: 'none' }}>
+                          <ChevronRight size={16} color="var(--text-tertiary)" />
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Rückruf picker inline */}
+                  {isPicking && (
+                    <div style={{ padding: '10px 14px 14px', borderBottom: i < callList.length - 1 ? '0.5px solid var(--border)' : 'none', backgroundColor: 'rgba(245,158,11,0.05)' }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#f59e0b', letterSpacing: '0.06em', marginBottom: 8 }}>RÜCKRUF ERINNERUNG</div>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {[
+                          { label: 'Morgen', days: 1 },
+                          { label: '+3 Tage', days: 3 },
+                          { label: '+1 Woche', days: 7 },
+                        ].map(chip => {
+                          const chipDate = addDays(chip.days)
+                          const active = callbackDate === chipDate
+                          return (
+                            <button key={chip.label}
+                              onClick={() => setCallback(c.id, active ? null : chipDate)}
+                              style={{ fontSize: 12, fontWeight: 700, padding: '7px 13px', borderRadius: 10, border: 'none', cursor: 'pointer', backgroundColor: active ? '#f59e0b' : '#f59e0b18', color: active ? '#fff' : '#f59e0b' }}>
+                              {active ? '✓ ' : ''}{chip.label}
+                            </button>
+                          )
+                        })}
+                        {callbackDate && (
+                          <button onClick={() => setCallback(c.id, null)}
+                            style={{ fontSize: 12, fontWeight: 700, padding: '7px 13px', borderRadius: 10, border: 'none', cursor: 'pointer', backgroundColor: '#ef444418', color: '#ef4444' }}>
+                            Löschen
+                          </button>
+                        )}
+                      </div>
+                      {callbackDate && (
+                        <div style={{ marginTop: 8, fontSize: 11, color: '#f59e0b', fontWeight: 600 }}>
+                          📅 {fmtCallback(callbackDate)}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               )
             })}
           </div>
-          <Link href="/dashboard/namensliste" style={{ textDecoration: 'none', display: 'block', textAlign: 'center', padding: '10px', fontSize: 12, color: 'var(--text-tertiary)' }}>
+          <Link href="/dashboard/vg" style={{ textDecoration: 'none', display: 'block', textAlign: 'center', padding: '10px', fontSize: 12, color: 'var(--text-tertiary)' }}>
             Alle Kontakte →
           </Link>
         </div>
