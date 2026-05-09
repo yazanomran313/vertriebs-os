@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Search, Upload, Plus, Phone, MessageSquare, ChevronRight, X } from 'lucide-react'
+import ClientAnalysis from '@/components/ClientAnalysis'
 
 interface Contact {
   id: string
@@ -61,6 +62,7 @@ export default function KontaktlistePage() {
   const [search, setSearch]         = useState('')
   const [filter, setFilter]         = useState<'alle' | 'vg' | 'rg'>('alle')
   const [selected, setSelected]     = useState<Contact | null>(null)
+  const [showAnalysis, setShowAnalysis] = useState(false)
   const [importing, setImporting]   = useState(false)
   const [importMsg, setImportMsg]   = useState('')
   const [showAdd, setShowAdd]       = useState(false)
@@ -228,7 +230,7 @@ export default function KontaktlistePage() {
               const rg    = c.rg_stage ? RG_LABELS[c.rg_stage] : null
               return (
                 <div key={c.id}
-                  onClick={() => setSelected(c)}
+                  onClick={() => { setShowAnalysis(false); setSelected(c) }}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px',
                     borderBottom: i < grouped[letter].length - 1 ? '0.5px solid var(--border)' : 'none',
@@ -267,6 +269,11 @@ export default function KontaktlistePage() {
         </div>
       )}
 
+      {/* ── KI-Analyse Modal ── */}
+      {showAnalysis && selected && (
+        <ClientAnalysis contact={selected} onClose={() => setShowAnalysis(false)} />
+      )}
+
       {/* ── Contact Detail Sheet ── */}
       {selected && (
         <div
@@ -303,6 +310,15 @@ export default function KontaktlistePage() {
                 </a>
               </div>
             )}
+
+            {/* KI-Analyse */}
+            <div style={{ padding: '0 20px 14px' }}>
+              <button
+                onClick={() => setShowAnalysis(true)}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#6366f115', border: '1px solid #6366f130', color: '#6366f1', borderRadius: 14, padding: '13px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+                ✨ KI-Analyse
+              </button>
+            </div>
 
             {/* Info rows */}
             <div style={{ padding: '0 20px' }}>
