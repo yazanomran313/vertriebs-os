@@ -355,7 +355,7 @@ function TTVCalendar({ sessions, onOpenSession, onNewSession }: {
       </div>
 
       {/* Fixed "Neue Liste" button */}
-      <div style={{ position: 'fixed', bottom: 'calc(70px + env(safe-area-inset-bottom))', left: 0, right: 0, display: 'flex', justifyContent: 'center', zIndex: 50, pointerEvents: 'none' }}>
+      <div style={{ position: 'fixed', bottom: 'calc(92px + env(safe-area-inset-bottom))', left: 0, right: 0, display: 'flex', justifyContent: 'center', zIndex: 50, pointerEvents: 'none' }}>
         <button onClick={onNewSession}
           style={{ pointerEvents: 'all', display: 'flex', alignItems: 'center', gap: 8, backgroundColor: '#6366f1', color: '#fff', border: 'none', borderRadius: 50, padding: '14px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 20px #6366f160' }}>
           <Plus size={18} /> Neue Liste

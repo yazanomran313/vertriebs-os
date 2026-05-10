@@ -71,7 +71,7 @@ export default function VGPage() {
     const { data, error: err } = await supabase
       .from('contacts')
       .select('*')
-      .or('vg_stage.not.is.null,stage.eq.namensliste')
+      .or('vg_stage.not.is.null,and(stage.eq.namensliste,pipeline.eq.vg)')
       .order('created_at', { ascending: false })
     if (err) setError('Fehler beim Laden: ' + err.message)
     else setContacts((data || []) as Contact[])
@@ -173,7 +173,7 @@ export default function VGPage() {
     setEditing(false)
   }
 
-  const namensliste = contacts.filter(c => c.stage === 'namensliste' && !c.vg_stage)
+  const namensliste = contacts.filter(c => c.stage === 'namensliste' && !c.vg_stage && c.pipeline === 'vg')
   const pipeline = contacts.filter(c => c.vg_stage !== null)
   const abgE = pipeline.filter(c => c.stage === 'abgeschlossen').reduce((s, c) => s + (c.einheiten || 0), 0)
   const offenE = pipeline.filter(c => c.stage !== 'abgeschlossen').reduce((s, c) => s + (c.einheiten || 0), 0)
@@ -190,9 +190,9 @@ export default function VGPage() {
     <div>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
-        <div>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>VG — Kundenverkauf</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 4 }}>{pipeline.length} in Pipeline · {namensliste.length} in Namensliste</p>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 13, margin: '4px 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pipeline.length} in Pipeline · {namensliste.length} in Namensliste</p>
         </div>
         <button onClick={() => setShowForm(true)} style={{ display: 'flex', alignItems: 'center', gap: 8, backgroundColor: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
           <Plus size={16} /> {isMobile ? '' : 'Neuer Deal'}
