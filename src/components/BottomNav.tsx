@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import {
   BarChart2, Wrench, AlignJustify,
-  BookUser, Users, List, TrendingUp,
+  Users, List, TrendingUp,
   Phone, GitBranch, UserPlus, ChevronRight, LogOut, X,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -20,7 +20,6 @@ const menuGroups = [
   {
     label: 'KONTAKTE',
     items: [
-      { href: '/dashboard/kontakte',    label: 'Kontaktliste',      icon: BookUser  },
       { href: '/dashboard/namensliste', label: 'Namensliste',       icon: List      },
       { href: '/dashboard/rg',          label: 'RG — Rekrutierung', icon: Users     },
     ],
