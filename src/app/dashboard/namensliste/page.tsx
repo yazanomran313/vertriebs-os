@@ -73,11 +73,21 @@ export default function NamenslistePage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const { data } = await supabase
-      .from('contacts')
-      .select('id,name,phone,email,beruf,vg_stage,rg_stage,einheiten,last_contact,created_at')
-      .order('name')
-    setContacts((data || []) as Contact[])
+    const PAGE = 1000
+    let all: Contact[] = []
+    let from = 0
+    while (true) {
+      const { data } = await supabase
+        .from('contacts')
+        .select('id,name,phone,email,beruf,vg_stage,rg_stage,einheiten,last_contact,created_at')
+        .order('name')
+        .range(from, from + PAGE - 1)
+      if (!data || data.length === 0) break
+      all = [...all, ...(data as Contact[])]
+      if (data.length < PAGE) break
+      from += PAGE
+    }
+    setContacts(all)
     setLoading(false)
   }, [])
 

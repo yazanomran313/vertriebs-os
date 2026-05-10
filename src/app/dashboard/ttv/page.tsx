@@ -63,19 +63,28 @@ export default function TTVPage() {
 
   async function load() {
     setLoading(true)
-    const [{ data: sess, error: sessErr }, { data: cts }] = await Promise.all([
-      supabase.from('ttv_sessions').select('*, ttv_entries(*)').order('date', { ascending: false }),
-      supabase.from('contacts').select('id, name, phone'),
-    ])
+    const { data: sess, error: sessErr } = await supabase
+      .from('ttv_sessions').select('*, ttv_entries(*)').order('date', { ascending: false })
     if (sessErr) { setDbError(true); setLoading(false); return }
     if (sess) setSessions(sess.map(s => ({
       ...s,
-      // migrate old 'tv_gemacht' status to 'termin_gelegt'
       entries: ((s.ttv_entries as Entry[]) || [])
         .map(e => ({ ...e, status: (e.status as string) === 'tv_gemacht' ? 'termin_gelegt' : e.status } as Entry))
         .sort((a, b) => a.position - b.position)
     })))
-    if (cts) setContacts(cts)
+
+    // Alle Kontakte paginiert laden (Supabase-Limit: 1000/Seite)
+    const PAGE = 1000
+    let allCts: Contact[] = []
+    let from = 0
+    while (true) {
+      const { data: cts } = await supabase.from('contacts').select('id, name, phone').order('name').range(from, from + PAGE - 1)
+      if (!cts || cts.length === 0) break
+      allCts = [...allCts, ...cts]
+      if (cts.length < PAGE) break
+      from += PAGE
+    }
+    setContacts(allCts)
     setLoading(false)
   }
 

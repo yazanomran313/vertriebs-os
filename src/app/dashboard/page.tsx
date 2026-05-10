@@ -136,10 +136,9 @@ export default function HeutePage() {
   }
 
   const load = useCallback(async () => {
-    const [{ data: { user } }, { data: sessData }, { data: cData }] = await Promise.all([
+    const [{ data: { user } }, { data: sessData }] = await Promise.all([
       supabase.auth.getUser(),
       supabase.from('ttv_sessions').select('*, ttv_entries(id, status)').order('date', { ascending: false }),
-      supabase.from('contacts').select('id,name,phone,beruf,vg_stage,rg_stage,last_contact,created_at'),
     ])
     if (user) {
       const { data: p } = await supabase.from('profiles').select('name').eq('id', user.id).single()
@@ -150,7 +149,21 @@ export default function HeutePage() {
     setAllSessions(sessions)
     setTodaySession(sessions.find(s => s.date === today) ?? null)
     setStreak(calcStreak(sessions))
-    setContacts((cData || []) as Contact[])
+
+    // Alle Kontakte paginiert laden
+    const PAGE = 1000
+    let all: Contact[] = []
+    let from = 0
+    while (true) {
+      const { data: cData } = await supabase
+        .from('contacts').select('id,name,phone,beruf,vg_stage,rg_stage,last_contact,created_at')
+        .order('name').range(from, from + PAGE - 1)
+      if (!cData || cData.length === 0) break
+      all = [...all, ...(cData as Contact[])]
+      if (cData.length < PAGE) break
+      from += PAGE
+    }
+    setContacts(all)
     setLoading(false)
   }, [])
 
