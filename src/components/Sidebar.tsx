@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import {
-  LayoutDashboard, TrendingUp, Users, List, GitBranch,
+  LayoutDashboard, TrendingUp, Users, GitBranch,
   Phone, UserPlus, LogOut, BookUser,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -13,37 +13,29 @@ const navGroups = [
   {
     label: 'ÜBERSICHT',
     items: [
-      { href: '/dashboard',            label: 'Dashboard',       icon: LayoutDashboard },
+      { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     ],
   },
   {
     label: 'KONTAKTE',
     items: [
-      { href: '/dashboard/kontakte',    label: 'Kontaktliste',    icon: BookUser },
-      { href: '/dashboard/namensliste', label: 'Namensliste',     icon: List },
-      { href: '/dashboard/vg',          label: 'VG — Kunden',     icon: TrendingUp },
-      { href: '/dashboard/rg',          label: 'RG — Rekrutierung',icon: Users },
+      { href: '/dashboard/kontakte', label: 'Kontaktliste',      icon: BookUser   },
+      { href: '/dashboard/vg',       label: 'VG — Kunden',       icon: TrendingUp },
+      { href: '/dashboard/rg',       label: 'RG — Rekrutierung', icon: Users      },
     ],
   },
   {
     label: 'TRACKING',
     items: [
       { href: '/dashboard/ttv',   label: 'TTV Kalender', icon: Phone },
-      { href: '/dashboard/calls', label: 'Anrufe',      icon: Phone },
-    ],
-  },
-  {
-    label: 'TOOLS',
-    items: [
-      { href: '/dashboard/tools',          label: 'Tools',         icon: Users },
-      { href: '/dashboard/kunden-avatar',  label: 'Kunden-Avatar', icon: Users },
+      { href: '/dashboard/calls', label: 'Anrufe',       icon: Phone },
     ],
   },
   {
     label: 'TEAM',
     items: [
-      { href: '/dashboard/team',          label: 'Org-Chart',       icon: GitBranch },
-      { href: '/dashboard/admin',         label: 'Team-Zugänge',    icon: UserPlus },
+      { href: '/dashboard/team',  label: 'Org-Chart',    icon: GitBranch },
+      { href: '/dashboard/admin', label: 'Team-Zugänge', icon: UserPlus  },
     ],
   },
 ]
@@ -75,7 +67,7 @@ export default function Sidebar() {
           <div style={{ width: 34, height: 34, borderRadius: 9, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13, color: '#fff', flexShrink: 0 }}>VO</div>
           <div>
             <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>Vertriebs-OS</div>
-            <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>Yazan Omran · Pro</div>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>Yazan Omran</div>
           </div>
         </div>
       </div>
@@ -108,11 +100,8 @@ export default function Sidebar() {
         {userEmail && (
           <div style={{
             padding: '4px 16px 8px',
-            fontSize: 11,
-            color: 'var(--text-secondary)',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
+            fontSize: 11, color: 'var(--text-secondary)',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
             {userEmail}
           </div>
@@ -120,16 +109,9 @@ export default function Sidebar() {
         <button
           onClick={handleLogout}
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '8px 16px',
-            fontSize: 13,
-            color: 'var(--text-secondary)',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            width: '100%',
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '8px 16px', fontSize: 13, color: 'var(--text-secondary)',
+            background: 'none', border: 'none', cursor: 'pointer', width: '100%',
           }}
         >
           <LogOut size={14} />

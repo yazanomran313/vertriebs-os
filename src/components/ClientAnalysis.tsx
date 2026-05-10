@@ -166,12 +166,23 @@ export default function ClientAnalysis({ contact, onClose }: Props) {
     setError('')
     setAnalyse(null)
     try {
-      const res  = await fetch('/api/ki/analyse', {
+      const res = await fetch('/api/ki/analyse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes }),
       })
-      const json = await res.json()
+
+      let json: { ok?: boolean; error?: string; data?: Analyse } = {}
+      try {
+        json = await res.json()
+      } catch {
+        setError(res.status === 504 || res.status === 502
+          ? 'Analyse dauert zu lange. Bitte kürzer fassen und erneut versuchen.'
+          : `Server-Fehler (${res.status}). Bitte erneut versuchen.`)
+        setLoading(false)
+        return
+      }
+
       if (!res.ok || !json.ok) {
         setError(json.error || 'Analyse fehlgeschlagen.')
       } else {
@@ -179,7 +190,7 @@ export default function ClientAnalysis({ contact, onClose }: Props) {
         setExpanded({})
       }
     } catch {
-      setError('Verbindungsfehler. Bitte erneut versuchen.')
+      setError('Netzwerkfehler. Bitte Verbindung prüfen und erneut versuchen.')
     } finally {
       setLoading(false)
     }
