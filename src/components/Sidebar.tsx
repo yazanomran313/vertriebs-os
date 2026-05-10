@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import {
-  LayoutDashboard, TrendingUp, Users, GitBranch,
+  LayoutDashboard, TrendingUp, Users, List, GitBranch,
   Phone, UserPlus, LogOut, BookUser,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -19,9 +19,10 @@ const navGroups = [
   {
     label: 'KONTAKTE',
     items: [
-      { href: '/dashboard/kontakte', label: 'Kontaktliste',      icon: BookUser   },
-      { href: '/dashboard/vg',       label: 'VG — Kunden',       icon: TrendingUp },
-      { href: '/dashboard/rg',       label: 'RG — Rekrutierung', icon: Users      },
+      { href: '/dashboard/kontakte',    label: 'Kontaktliste',      icon: BookUser   },
+      { href: '/dashboard/namensliste', label: 'Namensliste',       icon: List       },
+      { href: '/dashboard/vg',          label: 'VG — Kunden',       icon: TrendingUp },
+      { href: '/dashboard/rg',          label: 'RG — Rekrutierung', icon: Users      },
     ],
   },
   {
