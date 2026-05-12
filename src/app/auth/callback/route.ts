@@ -1,49 +1,68 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
-  const code = searchParams.get('code')
+  const code       = searchParams.get('code')
   const token_hash = searchParams.get('token_hash')
-  const type = searchParams.get('type') as 'invite' | 'recovery' | 'email' | null
-  const next = searchParams.get('next') ?? '/set-password'
+  const type       = searchParams.get('type') as 'invite' | 'recovery' | 'email' | null
+  const next       = searchParams.get('next') ?? '/set-password'
 
-  const cookieStore = await cookies()
+  // Invite + recovery/set-password both land on /set-password
+  const destination = type === 'invite' || next === '/set-password'
+    ? `${origin}/set-password`
+    : `${origin}${next}`
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() { return cookieStore.getAll() },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          )
-        },
-      },
-    }
-  )
-
-  // PKCE flow (code)
+  // ── PKCE code flow ──────────────────────────────────────
   if (code) {
+    // Create the redirect response FIRST, then write session cookies onto it.
+    // If we write to cookieStore and then return a fresh NextResponse, the
+    // browser never receives those cookies and the session is lost.
+    const response = NextResponse.redirect(destination)
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll()            { return request.cookies.getAll() },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              response.cookies.set(name, value, options)
+            )
+          },
+        },
+      }
+    )
+
     const { error } = await supabase.auth.exchangeCodeForSession(code)
-    if (!error) {
-      const redirectTo = type === 'invite' ? `${origin}/set-password` : `${origin}${next}`
-      return NextResponse.redirect(redirectTo)
-    }
+    if (!error) return response
   }
 
-  // Token hash flow (older Supabase / magic link)
+  // ── Token-hash / OTP flow (fallback for older Supabase emails) ──
   if (token_hash && type) {
+    const response = NextResponse.redirect(destination)
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll()            { return request.cookies.getAll() },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              response.cookies.set(name, value, options)
+            )
+          },
+        },
+      }
+    )
+
     const { error } = await supabase.auth.verifyOtp({ token_hash, type })
-    if (!error) {
-      const redirectTo = type === 'invite' ? `${origin}/set-password` : `${origin}${next}`
-      return NextResponse.redirect(redirectTo)
-    }
+    if (!error) return response
   }
 
-  // Fallback: direkt zu /set-password, der Client liest den Hash selbst aus
+  // ── Fallback: hash-fragment token (legacy Supabase implicit flow) ──
+  // The client-side set-password page handles this case itself.
   return NextResponse.redirect(`${origin}/set-password`)
 }
