@@ -32,6 +32,8 @@ export default function AdminPage() {
   const [confirmRevoke, setConfirmRevoke] = useState<string | null>(null)
   const [resending, setResending]       = useState<string | null>(null)
   const [resendOk, setResendOk]         = useState<string | null>(null)
+  const [deletingUser, setDeletingUser] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [confirmReset, setConfirmReset] = useState(false)
   const [resetting, setResetting]       = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
@@ -91,6 +93,19 @@ export default function AdminPage() {
       body: JSON.stringify({ deleteAllExcept: currentUserId }),
     })
     setResetting(false)
+    await loadAll()
+  }
+
+  async function deleteUser(id: string) {
+    if (confirmDelete !== id) { setConfirmDelete(id); return }
+    setDeletingUser(id)
+    setConfirmDelete(null)
+    await fetch('/api/admin/invitations', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: id }),
+    })
+    setDeletingUser(null)
     await loadAll()
   }
 
@@ -306,48 +321,87 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Team list */}
-      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.06em', marginBottom: 12 }}>
-        TEAM ({profiles.length})
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: 30, color: 'var(--text-secondary)', fontSize: 14 }}>Laden…</div>
-        ) : profiles.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 30, color: 'var(--text-tertiary)', fontSize: 14 }}>
-            Noch keine Mitglieder
-          </div>
-        ) : profiles.map(p => (
-          <div key={p.id}
-            style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, opacity: p.is_active === false ? 0.5 : 1 }}>
-
-            {/* Avatar */}
-            <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16, color: '#fff', flexShrink: 0 }}>
-              {(p.name ?? p.email).charAt(0).toUpperCase()}
+      {/* Team list — only confirmed (not in pending) */}
+      {(() => {
+        const pendingEmails = new Set(pending.map(i => i.email.toLowerCase()))
+        const confirmed = profiles.filter(p => !pendingEmails.has(p.email.toLowerCase()))
+        return (
+          <>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.06em', marginBottom: 12 }}>
+              TEAM ({confirmed.length})
             </div>
 
-            {/* Info */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name ?? '—'}</div>
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.email}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
+              {loading ? (
+                <div style={{ textAlign: 'center', padding: 30, color: 'var(--text-secondary)', fontSize: 14 }}>Laden…</div>
+              ) : confirmed.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 30, color: 'var(--text-tertiary)', fontSize: 14 }}>
+                  Noch keine bestätigten Mitglieder
+                </div>
+              ) : confirmed.map(p => (
+                <div key={p.id}
+                  style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px', opacity: p.is_active === false ? 0.5 : 1 }}>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    {/* Avatar */}
+                    <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16, color: '#fff', flexShrink: 0 }}>
+                      {(p.name ?? p.email).charAt(0).toUpperCase()}
+                    </div>
+
+                    {/* Info */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name ?? '—'}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.email}</div>
+                    </div>
+
+                    {/* Role */}
+                    {p.id !== currentUserId && (
+                      <select value={p.role} onChange={e => changeRole(p.id, e.target.value)}
+                        style={{ padding: '5px 8px', fontSize: 12, backgroundColor: 'var(--bg-hover)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)', cursor: 'pointer' }}>
+                        <option value="admin">Admin</option>
+                        <option value="gp">GP</option>
+                      </select>
+                    )}
+
+                    {/* Active toggle */}
+                    {p.id !== currentUserId && (
+                      <button onClick={() => toggleActive(p.id, p.is_active !== false)}
+                        style={{ padding: '6px 11px', fontSize: 12, fontWeight: 600, backgroundColor: p.is_active === false ? '#30D15820' : 'var(--bg-hover)', color: p.is_active === false ? '#30D158' : 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer', flexShrink: 0 }}>
+                        {p.is_active === false ? 'Aktivieren' : 'Aktiv'}
+                      </button>
+                    )}
+
+                    {p.id === currentUserId && (
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#6366f1', backgroundColor: '#6366f115', padding: '3px 8px', borderRadius: 6 }}>Du</span>
+                    )}
+
+                    {/* Delete */}
+                    {p.id !== currentUserId && (
+                      confirmDelete === p.id ? (
+                        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                          <button onClick={() => deleteUser(p.id)} disabled={deletingUser === p.id}
+                            style={{ padding: '6px 10px', fontSize: 12, fontWeight: 700, backgroundColor: '#FF453A', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer' }}>
+                            {deletingUser === p.id ? '…' : 'Ja, löschen'}
+                          </button>
+                          <button onClick={() => setConfirmDelete(null)}
+                            style={{ padding: '6px 10px', fontSize: 12, backgroundColor: 'var(--bg-hover)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer' }}>
+                            Nein
+                          </button>
+                        </div>
+                      ) : (
+                        <button onClick={() => deleteUser(p.id)}
+                          style={{ padding: '6px 11px', fontSize: 12, fontWeight: 600, backgroundColor: '#FF453A15', color: '#FF453A', border: '1px solid transparent', borderRadius: 8, cursor: 'pointer', flexShrink: 0 }}>
+                          🗑
+                        </button>
+                      )
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-
-            {/* Role */}
-            <select value={p.role} onChange={e => changeRole(p.id, e.target.value)}
-              style={{ padding: '5px 8px', fontSize: 12, backgroundColor: 'var(--bg-hover)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)', cursor: 'pointer' }}>
-              <option value="admin">Admin</option>
-              <option value="gp">GP</option>
-            </select>
-
-            {/* Active toggle */}
-            <button onClick={() => toggleActive(p.id, p.is_active !== false)}
-              style={{ padding: '6px 11px', fontSize: 12, fontWeight: 600, backgroundColor: p.is_active === false ? '#30D15820' : '#FF453A15', color: p.is_active === false ? '#30D158' : '#FF453A', border: '1px solid transparent', borderRadius: 8, cursor: 'pointer', flexShrink: 0 }}>
-              {p.is_active === false ? 'Aktivieren' : 'Deaktivieren'}
-            </button>
-          </div>
-        ))}
-      </div>
+          </>
+        )
+      })()}
     </div>
   )
 }
