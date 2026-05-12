@@ -30,6 +30,8 @@ export default function AdminPage() {
   const [keyMissing, setKeyMissing]     = useState(false)
   const [revoking, setRevoking]         = useState<string | null>(null)
   const [confirmRevoke, setConfirmRevoke] = useState<string | null>(null)
+  const [resending, setResending]       = useState<string | null>(null)
+  const [resendOk, setResendOk]         = useState<string | null>(null)
   const [confirmReset, setConfirmReset] = useState(false)
   const [resetting, setResetting]       = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
@@ -90,6 +92,22 @@ export default function AdminPage() {
     })
     setResetting(false)
     await loadAll()
+  }
+
+  async function resendInvite(inv: PendingInvite) {
+    setResending(inv.id)
+    setResendOk(null)
+    const res  = await fetch('/api/admin/invite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: inv.email, name: inv.name ?? '' }),
+    })
+    const json = await res.json() as { ok?: boolean; error?: string }
+    setResending(null)
+    if (json.ok) {
+      setResendOk(inv.id)
+      setTimeout(() => setResendOk(null), 3000)
+    }
   }
 
   async function revokeInvite(invite: PendingInvite) {
@@ -247,6 +265,17 @@ export default function AdminPage() {
                 <div style={{ fontSize: 11, fontWeight: 600, color: '#FF9F0A', backgroundColor: '#FF9F0A20', padding: '3px 8px', borderRadius: 6, flexShrink: 0 }}>
                   Ausstehend
                 </div>
+
+                {/* Resend */}
+                <button
+                  onClick={() => resendInvite(inv)}
+                  disabled={resending === inv.id}
+                  style={{ padding: '6px 11px', fontSize: 12, fontWeight: 600, flexShrink: 0, borderRadius: 8, cursor: 'pointer', border: 'none',
+                    backgroundColor: resendOk === inv.id ? '#30D15820' : '#6366f115',
+                    color: resendOk === inv.id ? '#30D158' : '#6366f1',
+                  }}>
+                  {resending === inv.id ? '…' : resendOk === inv.id ? '✓ Gesendet' : '↩ Erneut'}
+                </button>
 
                 {/* Revoke */}
                 {confirmRevoke === inv.id ? (
