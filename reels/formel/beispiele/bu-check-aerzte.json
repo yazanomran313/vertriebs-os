@@ -1,0 +1,30 @@
+{
+  "meta": { "title": "BU-Check für Ärzte", "fps": 30 },
+  "brand": { "handle": "Yazan Omran", "watermark": true, "flash": true },
+  "hub": { "kicker": "Checkliste", "title": "BU für Ärzte" },
+  "spokes": [
+    "Verweisung",
+    "Nachversicherung",
+    "Rentenhöhe",
+    "Infektionsklausel",
+    "Laufzeit",
+    "Rückwirkung",
+    "Gesundheitsfragen",
+    "Eintrittsalter"
+  ],
+  "timeline": [
+    { "type": "intro", "dur": 3.0, "captions": ["Unterschreib", "keine BU,", "bevor du", "diese | *8 Punkte*", "geprüft hast."] },
+    { "type": "spoke", "spoke": 0, "dur": 2.3, "captions": ["Kein Verweis", "auf einen | *anderen Beruf.*"] },
+    { "type": "spoke", "spoke": 1, "dur": 2.5, "captions": ["Rente später erhöhen", "*ohne neue* | Gesundheitsfragen."] },
+    { "type": "spoke", "spoke": 2, "dur": 2.3, "captions": ["Sie muss deinen", "*Lebensstandard* | tragen."] },
+    { "type": "card", "dur": 2.2, "text": "Aber dieser Punkt | *ist für Ärzte Pflicht.*" },
+    { "type": "spoke", "spoke": 3, "dur": 2.5, "captions": ["Ein Tätigkeitsverbot", "*muss als BU* | *zählen.*"] },
+    { "type": "spoke", "spoke": 4, "dur": 2.2, "captions": ["Absichern bis zur Rente.", "*Nicht kürzer.*"] },
+    { "type": "spoke", "spoke": 5, "dur": 2.4, "captions": ["Auch bei später Meldung:", "*rückwirkend* | leisten."] },
+    { "type": "card", "dur": 2.2, "text": "Und hier entscheidet sich, | *ob gezahlt wird.*" },
+    { "type": "spoke", "spoke": 6, "dur": 2.5, "captions": ["Vollständig beantworten.", "Sonst droht | *der Rücktritt.*"] },
+    { "type": "spoke", "spoke": 7, "dur": 2.3, "captions": ["Jünger und gesünder", "*heißt günstiger.*"] },
+    { "type": "outro", "dur": 3.6, "header": "Screenshot machen", "captions": ["Und schick's einem | *Kollegen.*"] },
+    { "type": "end", "dur": 3.2 }
+  ]
+}

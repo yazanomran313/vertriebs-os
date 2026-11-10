@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Formel-Reel</title>
+<style>
+  @font-face { font-family: 'ReelDisplay'; src: url('../fonts/InterDisplay-SemiBold.otf') format('opentype'); font-weight: 600; }
+  @font-face { font-family: 'ReelDisplay'; src: url('../fonts/InterDisplay-Bold.otf') format('opentype'); font-weight: 700; }
+  html, body { margin: 0; height: 100%; background: #111; color: #ddd; font: 13px system-ui, sans-serif; }
+  body.preview { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+  body.preview canvas { height: calc(100vh - 56px); width: auto; box-shadow: 0 0 0 1px #333; }
+  #ui { display: flex; align-items: center; gap: 10px; width: min(720px, 96vw); }
+  #ui input { flex: 1; }
+  #ui button { background: #333; color: #eee; border: 0; border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+  #warn { color: #f5a524; max-width: 96vw; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<div id="ui" hidden>
+  <button id="play">▶︎</button>
+  <input id="scrub" type="range" min="0" max="1000" value="0">
+  <span id="time">0.00 s</span>
+</div>
+<div id="warn"></div>
+<script>
+'use strict';
+/*
+ * Formel-Reel Engine
+ * Jedes Frame ist eine reine Funktion der Zeit: REEL.draw(t).
+ * Stil und Maße: siehe reels/STYLE.md. Inhalte kommen ausschließlich aus der Spec (JSON).
+ */
+const W = 1080, H = 1920;
+const FONT = "'ReelDisplay', 'Inter Display', 'Inter', system-ui, sans-serif";
+
+const COL = {
+  bg: '#F7F5F6', ink: '#141213', hub: '#292725', hubLine: 'rgba(247,245,246,0.92)',
+  card: '#0B090A', white: '#FFFFFF', endDim: 'rgba(22,22,22,0.80)',
+};
+
+// Weltmaße: 1 Einheit = 1 px bei Zoom 1 (Übersicht).
+const L = {
+  hubR: 174, fillR: 0.90, innerR: 0.80, dotDist: 301, dotSize: 8, spokeW: 2, ringW: 2.4,
+  labelSize: 36, labelGap: 40, labelMaxClose: 940,
+  closeZoom: 2.4, closeY: 1700, overviewY: 1010, margin: 46,
+  kickerSize: 22, titleSize: 42,
+  captionY: 520, captionSmall: 60, captionBig: 100, captionMaxW: 940,
+  headerY: 452, headerSize: 66, outroCaptionY: 1580,
+  cardY: 800, cardSmall: 60, cardBig: 104,
+};
+
+// Timing in Sekunden.
+const TM = {
+  turn: 0.38, firstZoom: 0.42, outroZoom: 0.85,
+  typeLead: 0.10, perChar: 0.065, minType: 0.30, maxType: 0.55, caret: 0.30,
+  wordIn: 0.13, spokeLead: 0.55, introLead: 0.15, cardLead: 0.12, tail: 0.05,
+  endPop: 0.35, endGradient: 2.2,
+};
+
+const IG_STOPS = ['#FEDA75', '#FA7E1E', '#D62976', '#962FBF', '#4F5BD5'];
+
+// ---------- Helfer ----------
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const lerp = (a, b, p) => a + (b - a) * p;
+const ease = {
+  linear: p => p,
+  outCubic: p => 1 - Math.pow(1 - p, 3),
+  inOutCubic: p => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2),
+  inOutQuart: p => (p < 0.5 ? 8 * p * p * p * p : 1 - Math.pow(-2 * p + 2, 4) / 2),
+  outQuart: p => 1 - Math.pow(1 - p, 4),
+  outBack: p => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(p - 1, 3) + c1 * Math.pow(p - 1, 2); },
+};
+const deg = d => (d * Math.PI) / 180;
+const shortestDelta = (from, to) => { let d = (to - from) % 360; if (d > 180) d -= 360; if (d < -180) d += 360; return d; };
+const hash = n => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+
+function setFont(ctx, size, weight) {
+  ctx.font = `${weight} ${size}px ${FONT}`;
+  ctx.letterSpacing = `${(-0.035 * size).toFixed(2)}px`;
+}
+function textW(ctx, s, size, weight) { setFont(ctx, size, weight); return ctx.measureText(s).width; }
+const CAP = 0.727; // Versalhöhe von Inter in em
+
+// ---------- Spec -> Plan ----------
+function parsePhrase(raw) {
+  // "kleine Wörter | *große Wörter*" ; '|' = Zeilenumbruch, *…* = groß
+  const text = typeof raw === 'string' ? raw : raw.text;
+  const lines = text.split('|').map(line => {
+    const words = []; let big = false;
+    for (const tok of line.trim().split(/\s+/).filter(Boolean)) {
+      let w = tok; const opens = w.startsWith('*'); if (opens) { big = true; w = w.slice(1); }
+      const closes = w.endsWith('*'); if (closes) w = w.slice(0, -1);
+      words.push({ text: w, big });
+      if (closes) big = false;
+    }
+    return words;
+  });
+  return { lines, at: typeof raw === 'object' ? raw.at : undefined, x: typeof raw === 'object' ? raw.x : undefined };
+}
+
+function buildPlan(spec) {
+  const n = spec.spokes.length;
+  const beats = []; let t = 0;
+  for (const b of spec.timeline) { beats.push({ ...b, start: t, end: t + b.dur }); t += b.dur; }
+  const plan = { spec, n, beats, duration: t, warnings: [], phrases: [], cues: [] };
+
+  // Label-Reveal pro Speiche
+  plan.labels = spec.spokes.map(s => ({ text: s, typeStart: Infinity, typeEnd: Infinity }));
+  for (const b of beats) {
+    if (b.type !== 'spoke') continue;
+    const lab = plan.labels[b.spoke];
+    if (!lab) { plan.warnings.push(`Speiche ${b.spoke} existiert nicht.`); continue; }
+    if (lab.typeStart !== Infinity) continue;
+    lab.typeStart = b.start + TM.typeLead;
+    lab.typeEnd = lab.typeStart + clamp(lab.text.length * TM.perChar, TM.minType, TM.maxType);
+    plan.cues.push({ kind: 'type', t: +lab.typeStart.toFixed(3), dur: +(lab.typeEnd - lab.typeStart).toFixed(3), chars: lab.text.length });
+  }
+  const outro = beats.find(b => b.type === 'outro');
+  for (const lab of plan.labels) if (lab.typeStart === Infinity && outro) { lab.typeStart = lab.typeEnd = outro.start; }
+
+  // Captions: Wortzeiten
+  beats.forEach((b, bi) => {
+    const list = b.type === 'card' ? (b.text ? [b.text] : []) : (b.captions || []);
+    if (!list.length) return;
+    const phrases = list.map(parsePhrase);
+    const lead = b.type === 'spoke' ? TM.spokeLead : b.type === 'intro' ? TM.introLead : b.type === 'card' ? TM.cardLead : TM.outroZoom + 0.25;
+    const winStart = b.start + lead, winEnd = b.end - TM.tail - (b.type === 'card' ? 0.35 : 0);
+    const total = phrases.reduce((s, p) => s + p.lines.flat().length, 0);
+    const slot = (winEnd - winStart) / Math.max(1, total);
+    let k = 0;
+    phrases.forEach((p, pi) => {
+      const words = p.lines.flat();
+      const pStart = p.at !== undefined ? b.start + p.at : winStart + k * slot;
+      const next = phrases[pi + 1];
+      const pEnd = next ? (next.at !== undefined ? b.start + next.at : winStart + (k + words.length) * slot) : b.end;
+      // Karten bauen schnell auf und halten die Pointe; sonst max. 0,32 s pro Wort.
+      const wSlot = Math.min(b.type === 'card' ? 0.2 : 0.32, (pEnd - pStart) / (words.length + (next ? 0.6 : 0)));
+      words.forEach((w, wi) => { w.t = pStart + wi * wSlot; });
+      if (slot < 0.2 && p.at === undefined) plan.warnings.push(`Beat ${bi} (${b.type}): ${slot.toFixed(2)} s pro Wort – zu schnell zum Mitlesen. Beat verlängern oder Text kürzen.`);
+      plan.phrases.push({ ...p, beat: bi, kind: b.type, start: pStart, end: pEnd, seed: bi * 17 + pi });
+      k += words.length;
+    });
+  });
+
+  // Kamera-Segmente
+  plan.ovZoom = 1; // wird nach Font-Load gefittet
+  plan.segments = [];
+  const intro = beats.find(b => b.type === 'intro');
+  plan.introEnd = intro ? intro.end : 0;
+  for (const b of beats) {
+    if (b.type === 'card') plan.cues.push({ kind: 'cardIn', t: +b.start.toFixed(3) });
+    if (b.type === 'outro') plan.cues.push({ kind: 'outro', t: +b.start.toFixed(3) });
+    if (b.type === 'end') plan.cues.push({ kind: 'end', t: +b.start.toFixed(3) });
+  }
+  return plan;
+}
+
+function fitOverview(ctx, plan) {
+  // Zoom so wählen, dass alle Labels in der Übersicht ins Bild passen.
+  const n = plan.n; let need = 1;
+  plan.labelFit = plan.labels.map(l => Math.min(1, L.labelMaxClose / (textW(ctx, l.text, L.labelSize, 600) * L.closeZoom)));
+  for (let i = 0; i < n; i++) {
+    const a = deg(-90 + (i * 360) / n), ux = Math.cos(a), uy = Math.sin(a);
+    const size = L.labelSize * plan.labelFit[i];
+    const w = textW(ctx, plan.labels[i].text, size, 600), h = size * CAP;
+    const off = L.dotDist + L.labelGap + Math.abs(ux) * w / 2 + Math.abs(uy) * h / 2;
+    const ex = Math.abs(ux * off) + w / 2, ey = Math.abs(uy * off) + h / 2;
+    need = Math.min(need, (W / 2 - L.margin) / ex, (H * 0.36) / ey);
+  }
+  plan.ovZoom = need;
+  buildCamera(plan);
+}
+
+function buildCamera(plan) {
+  const segs = []; const n = plan.n;
+  let cur = { z: plan.ovZoom, x: W / 2, y: L.overviewY, r: 0 };
+  for (const b of plan.beats) {
+    if (b.type === 'spoke') {
+      const target = { z: L.closeZoom, x: W / 2, y: L.closeY, r: cur.r + shortestDelta(cur.r, -(b.spoke * 360) / n) };
+      const first = !segs.length;
+      segs.push({ t0: b.start, t1: b.start + (first ? TM.firstZoom : TM.turn), from: { ...cur }, to: target, ease: first ? ease.inOutQuart : ease.inOutCubic });
+      cur = target;
+    } else if (b.type === 'outro') {
+      const target = { z: plan.ovZoom, x: W / 2, y: L.overviewY, r: cur.r + shortestDelta(cur.r, 0) };
+      segs.push({ t0: b.start, t1: b.start + TM.outroZoom, from: { ...cur }, to: target, ease: ease.outCubic });
+      cur = target;
+    }
+  }
+  plan.segments = segs;
+}
+
+function poseAt(plan, t) {
+  if (t < plan.introEnd) {
+    const p = ease.outCubic(clamp(t / 0.7));
+    return { z: plan.ovZoom * (0.45 + 0.55 * p) * (1 + 0.05 * (t / plan.introEnd)), x: W / 2, y: L.overviewY, r: -10 * (1 - ease.outCubic(clamp(t / 1.0))) };
+  }
+  let pose = { z: plan.ovZoom * 1.05, x: W / 2, y: L.overviewY, r: 0 };
+  for (const s of plan.segments) {
+    if (t < s.t0) break;
+    if (t >= s.t1) { pose = s.to; continue; }
+    const p = s.ease(clamp((t - s.t0) / (s.t1 - s.t0)));
+    const from = s === plan.segments[0] && plan.introEnd ? { ...s.from, z: plan.ovZoom * 1.05 } : s.from;
+    return {
+      z: Math.exp(lerp(Math.log(from.z), Math.log(s.to.z), p)),
+      x: lerp(from.x, s.to.x, p), y: lerp(from.y, s.to.y, p), r: lerp(from.r, s.to.r, p),
+    };
+  }
+  return pose;
+}
+
+function beatAt(plan, t) {
+  for (const b of plan.beats) if (t >= b.start && t < b.end) return b;
+  return plan.beats[plan.beats.length - 1];
+}
+
+// ---------- Vorberechnete Ebenen ----------
+function makeGrid(dark) {
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d'); const step = 18;
+  for (let y = step / 2; y < H; y += step) for (let x = step / 2; x < W; x += step) {
+    const dx = (x - W / 2) / (W / 2), dy = (y - H * 0.42) / (H * 0.6);
+    const fall = clamp(1 - 0.55 * Math.sqrt(dx * dx + dy * dy));
+    g.fillStyle = dark ? `rgba(255,255,255,${0.055 * fall})` : `rgba(20,18,19,${0.12 * fall})`;
+    g.beginPath(); g.arc(x, y, 1.3, 0, Math.PI * 2); g.fill();
+  }
+  const v = g.createRadialGradient(W / 2, H * 0.45, H * 0.2, W / 2, H * 0.45, H * 0.75);
+  v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, dark ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.035)');
+  g.fillStyle = v; g.fillRect(0, 0, W, H);
+  return c;
+}
+
+// ---------- Zeichnen ----------
+function polygon(ctx, cx, cy, r, n, rot) {
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const a = deg(-90 + rot + (i * 360) / n);
+    const x = cx + r * Math.cos(a), y = cy + r * Math.sin(a);
+    i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  }
+  ctx.closePath();
+}
+
+function growAt(plan, t, i) {
+  if (t >= plan.introEnd) return 1;
+  return ease.outCubic(clamp((t - 0.05 - i * 0.035) / 0.45));
+}
+
+function labelState(plan, t, i) {
+  const lab = plan.labels[i];
+  if (t < lab.typeStart) return { k: 0, hidden: true };
+  if (t >= lab.typeEnd) return { k: lab.text.length, caret: t < lab.typeEnd + TM.caret };
+  const k = Math.floor(lab.text.length * clamp((t - lab.typeStart) / (lab.typeEnd - lab.typeStart)));
+  return { k, typing: true };
+}
+
+function drawLabel(ctx, plan, t, i, cx, cy, size, alpha) {
+  const lab = plan.labels[i]; const st = labelState(plan, t, i);
+  setFont(ctx, size, 600);
+  const full = ctx.measureText(lab.text).width; const x0 = cx - full / 2;
+  const capH = size * CAP; const base = cy + capH / 2;
+  ctx.globalAlpha = alpha; ctx.fillStyle = COL.ink; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  if (st.hidden) { ctx.fillRect(x0, cy - capH * 0.6, full, capH * 1.2); ctx.globalAlpha = 1; return; }
+  const typed = lab.text.slice(0, st.k);
+  ctx.fillText(typed, x0, base);
+  const tw = st.k ? ctx.measureText(typed).width : 0;
+  if (st.typing) ctx.fillRect(x0 + tw, cy - capH * 0.6, Math.max(full - tw, size * 0.5), capH * 1.2);
+  else if (st.caret) ctx.fillRect(x0 + full + size * 0.05, cy - capH * 0.75, Math.max(2, size * 0.045), capH * 1.5);
+  ctx.globalAlpha = 1;
+}
+
+function drawWorld(ctx, plan, t, pose, grid) {
+  const spec = plan.spec, n = plan.n;
+  ctx.fillStyle = COL.bg; ctx.fillRect(0, 0, W, H); ctx.drawImage(grid, 0, 0);
+  const { z, x: hx, y: hy, r } = pose;
+  const R = L.hubR * z;
+  // Speichen
+  for (let i = 0; i < n; i++) {
+    const g = growAt(plan, t, i); if (g <= 0) continue;
+    const a = deg(-90 + r + (i * 360) / n), ux = Math.cos(a), uy = Math.sin(a);
+    const d = lerp(L.hubR, L.dotDist, g) * z;
+    ctx.strokeStyle = COL.ink; ctx.lineWidth = Math.max(1.5, L.spokeW * z);
+    ctx.beginPath(); ctx.moveTo(hx + ux * R, hy + uy * R); ctx.lineTo(hx + ux * d, hy + uy * d); ctx.stroke();
+    ctx.fillStyle = COL.ink; ctx.beginPath(); ctx.arc(hx + ux * d, hy + uy * d, L.dotSize * z * clamp(g * 1.4 - 0.4), 0, Math.PI * 2); ctx.fill();
+    // Label aufrecht neben dem Punkt
+    const size = L.labelSize * plan.labelFit[i] * z;
+    setFont(ctx, size, 600);
+    const w = ctx.measureText(plan.labels[i].text).width, h = size * CAP;
+    const off = d + L.labelGap * z + Math.abs(ux) * w / 2 + Math.abs(uy) * h / 2;
+    drawLabel(ctx, plan, t, i, hx + ux * off, hy + uy * off, size, clamp(g * 2 - 1));
+  }
+  // Hub
+  ctx.lineWidth = Math.max(1.5, L.ringW * z); ctx.strokeStyle = COL.hub;
+  polygon(ctx, hx, hy, R, n, r); ctx.fillStyle = COL.bg; ctx.fill(); ctx.stroke();
+  polygon(ctx, hx, hy, R * L.fillR, n, r); ctx.fillStyle = COL.hub; ctx.fill();
+  ctx.lineWidth = Math.max(1, 1.6 * z); ctx.strokeStyle = COL.hubLine;
+  polygon(ctx, hx, hy, R * L.innerR, n, r); ctx.stroke();
+  // Hub-Text (aufrecht)
+  const maxW = 2 * L.hubR * L.innerR * 0.84;
+  const kick = spec.hub.kicker || '', title = spec.hub.title || '';
+  const tFit = Math.min(1, maxW / Math.max(1, textW(ctx, title, L.titleSize, 700)));
+  const kFit = Math.min(1, maxW / Math.max(1, textW(ctx, kick, L.kickerSize, 600)));
+  const ts = L.titleSize * tFit * z, ks = L.kickerSize * kFit * z;
+  ctx.fillStyle = COL.white; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  setFont(ctx, ts, 700); ctx.fillText(title, hx, hy + ts * CAP / 2 + (kick ? 6 * z : 0));
+  if (kick) { setFont(ctx, ks, 600); ctx.fillText(kick, hx, hy - ts * CAP / 2 - 6 * z); }
+}
+
+function layoutPhrase(ctx, p, small, big, maxW) {
+  let scale = 1, lines;
+  for (let pass = 0; pass < 6; pass++) {
+    lines = p.lines.map(words => {
+      const items = words.map(w => {
+        const size = (w.big ? big : small) * scale, weight = w.big ? 700 : 600;
+        return { w, size, weight, width: textW(ctx, w.text, size, weight) };
+      });
+      const gap = small * scale * 0.26;
+      const width = items.reduce((s, it) => s + it.width, 0) + gap * Math.max(0, items.length - 1);
+      const lineSize = Math.max(...items.map(it => it.size));
+      return { items, gap, width, lineSize };
+    });
+    const widest = Math.max(...lines.map(l => l.width));
+    if (widest <= maxW) break;
+    scale *= maxW / widest;
+  }
+  return lines;
+}
+
+function drawPhrase(ctx, p, t, y0, color, small, big, center) {
+  const lines = p._layout || (p._layout = layoutPhrase(ctx, p, small, big, L.captionMaxW));
+  const widest = Math.max(...lines.map(l => l.width));
+  let cx = center ? W / 2 : (p.x !== undefined ? p.x : W / 2 + (hash(p.seed) - 0.5) * 180);
+  cx = clamp(cx, (W - L.captionMaxW) / 2 + widest / 2, W - (W - L.captionMaxW) / 2 - widest / 2);
+  let base = y0;
+  lines.forEach((line, li) => {
+    if (li) base += line.lineSize * 1.0; // eng gestapelt, aber mit Luft für Umlaute (Ä, Ö, Ü)
+    let x = cx - line.width / 2;
+    for (const it of line.items) {
+      const pr = clamp((t - it.w.t) / TM.wordIn);
+      if (pr > 0) {
+        const e = ease.outCubic(pr);
+        ctx.save();
+        ctx.globalAlpha = e; ctx.fillStyle = color; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+        if (pr < 1) ctx.filter = `blur(${((1 - e) * 12).toFixed(1)}px)`;
+        const s = 1 + 0.12 * (1 - e), mx = x + it.width / 2, my = base - it.size * CAP / 2;
+        ctx.translate(mx, my); ctx.scale(s, s); ctx.translate(-mx, -my);
+        setFont(ctx, it.size, it.weight); ctx.fillText(it.w.text, x, base + (1 - e) * 8);
+        ctx.restore();
+      }
+      x += it.width + line.gap;
+    }
+  });
+}
+
+function drawGlyph(ctx, cx, cy, size, mode, alpha, phase = 0) {
+  ctx.save(); ctx.globalAlpha = alpha;
+  let style = mode === 'white' ? COL.white : COL.ink;
+  if (mode === 'gradient') {
+    const a = deg(225 + phase * 120), rr = size * 0.75;
+    const g = ctx.createLinearGradient(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, cx - Math.cos(a) * rr, cy - Math.sin(a) * rr);
+    IG_STOPS.forEach((c, i) => g.addColorStop(i / (IG_STOPS.length - 1), c));
+    style = g;
+  }
+  ctx.strokeStyle = style; ctx.fillStyle = style; ctx.lineWidth = size * 0.09;
+  const s = size / 2 - ctx.lineWidth / 2;
+  ctx.beginPath(); ctx.roundRect(cx - s, cy - s, 2 * s, 2 * s, size * 0.28); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx, cy, size * 0.22, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx + size * 0.255, cy - size * 0.255, size * 0.055, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+function drawHandle(ctx, text, x, y, size, color, align, alpha) {
+  ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'alphabetic';
+  ctx.font = `700 ${size}px ${FONT}`; ctx.letterSpacing = `${(0.02 * size).toFixed(2)}px`;
+  ctx.fillText(text.toUpperCase(), x, y); ctx.restore();
+}
+
+// ---------- Engine ----------
+const REEL = (() => {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const acc = document.createElement('canvas'); acc.width = W; acc.height = H;
+  const tmp = document.createElement('canvas'); tmp.width = W; tmp.height = H;
+  let plan = null, gridLight = null, gridDark = null, fps = 30;
+
+  function renderWorldBlurred(t) {
+    const p0 = poseAt(plan, t), p1 = poseAt(plan, t + 1 / fps);
+    // Geschätzte Pixelbewegung pro Frame -> Anzahl Unterbilder (180°-Verschluss), damit Unschärfe glatt statt gestuft wirkt.
+    const px = Math.abs(p1.y - p0.y) + Math.abs(p1.z - p0.z) * L.dotDist * 1.6 + Math.abs(deg(p1.r - p0.r)) * L.dotDist * Math.max(p0.z, p1.z);
+    if (px < 4) { drawWorld(ctx, plan, t, p0, gridLight); return; }
+    const K = Math.min(32, Math.max(4, Math.ceil(px / 2 / 3))), a = acc.getContext('2d'), b = tmp.getContext('2d');
+    for (let k = 0; k < K; k++) {
+      const tk = t + ((k / (K - 1)) - 0.5) * (0.5 / fps);
+      drawWorld(b, plan, tk, poseAt(plan, tk), gridLight);
+      a.globalAlpha = 1 / (k + 1); a.drawImage(tmp, 0, 0);
+    }
+    a.globalAlpha = 1; ctx.drawImage(acc, 0, 0);
+  }
+
+  function draw(t) {
+    const spec = plan.spec, beat = beatAt(plan, t), handle = spec.brand?.handle || '';
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.filter = 'none'; ctx.globalAlpha = 1;
+    if (beat.type === 'card') {
+      ctx.fillStyle = COL.card; ctx.fillRect(0, 0, W, H); ctx.drawImage(gridDark, 0, 0);
+      for (const p of plan.phrases) if (p.beat === plan.beats.indexOf(beat)) drawPhrase(ctx, p, t, L.cardY, COL.white, L.cardSmall, L.cardBig, true);
+      if (handle) { drawGlyph(ctx, 104, 1176, 46, 'white', 1); drawHandle(ctx, handle, 81, 1250, 24, COL.white, 'left', 1); }
+      ctx.restore(); return;
+    }
+    renderWorldBlurred(t);
+    // Captions (Intro, Speichen, Outro)
+    for (const p of plan.phrases) {
+      if (p.kind === 'card' || t < p.start || t >= p.end) continue;
+      const y = p.kind === 'outro' ? L.outroCaptionY : L.captionY;
+      drawPhrase(ctx, p, t, y, COL.ink, L.captionSmall, L.captionBig, p.kind === 'outro');
+    }
+    const outro = plan.beats.find(b => b.type === 'outro');
+    if (outro && t >= outro.start && outro.header) {
+      const hp = plan._header || (plan._header = { lines: parsePhrase(`*${outro.header}*`).lines, seed: 0 });
+      hp.lines.flat().forEach(w => { w.t = outro.start + 0.12; });
+      drawPhrase(ctx, hp, t, L.headerY, COL.ink, L.headerSize, L.headerSize, true);
+    }
+    // Wasserzeichen
+    const end = plan.beats.find(b => b.type === 'end');
+    if (handle && spec.brand?.watermark !== false && !(end && t >= end.start)) {
+      const firstSpoke = plan.beats.find(b => b.type === 'spoke');
+      const flash = spec.brand?.flash !== false && firstSpoke && t >= firstSpoke.start && t < firstSpoke.end;
+      drawGlyph(ctx, 972, 448, 40, flash ? 'gradient' : 'ink', flash ? 1 : 0.15, t);
+      drawHandle(ctx, handle, 972, 516, 19, COL.ink, 'center', 0.13);
+    }
+    // Endkarte
+    if (end && t >= end.start) {
+      const te = t - end.start;
+      ctx.fillStyle = COL.endDim; ctx.globalAlpha = clamp(te / 0.08); ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
+      const s = ease.outBack(clamp((te - 0.04) / TM.endPop));
+      const gy = L.overviewY - 72;
+      if (s > 0) {
+        const white = clamp((te - TM.endGradient) / 0.4);
+        ctx.save(); ctx.translate(W / 2, gy); ctx.scale(s, s); ctx.translate(-W / 2, -gy);
+        drawGlyph(ctx, W / 2, gy, 128, 'gradient', 1 - white, te * 0.8);
+        if (white > 0) drawGlyph(ctx, W / 2, gy, 128, 'white', white);
+        ctx.restore();
+      }
+      drawHandle(ctx, handle, W / 2, gy + 124, 40, COL.white, 'center', clamp((te - 0.12) / 0.2));
+    }
+    ctx.restore();
+  }
+
+  async function load(spec, opts = {}) {
+    fps = opts.fps || spec.meta?.fps || 30;
+    await Promise.all([document.fonts.load(`600 40px ReelDisplay`), document.fonts.load(`700 40px ReelDisplay`)]);
+    plan = buildPlan(spec);
+    fitOverview(ctx, plan);
+    gridLight = makeGrid(false); gridDark = makeGrid(true);
+    return info();
+  }
+
+  function info() {
+    return { duration: plan.duration, fps, cues: plan.cues, warnings: plan.warnings, overviewZoom: +plan.ovZoom.toFixed(3),
+      beats: plan.beats.map(b => ({ type: b.type, start: +b.start.toFixed(3), end: +b.end.toFixed(3), spoke: b.spoke })) };
+  }
+
+  function frame(t, type = 'image/png', quality) { draw(t); return canvas.toDataURL(type, quality); }
+  return { load, draw, frame, info };
+})();
+window.REEL = REEL;
+
+// ---------- Vorschau-Modus (Browser) ----------
+(async () => {
+  const q = new URLSearchParams(location.search);
+  if (q.get('render') === '1') { document.body.className = 'render'; return; }
+  document.body.className = 'preview';
+  const specPath = q.get('spec');
+  if (!specPath) { document.getElementById('warn').textContent = 'URL-Parameter ?spec=beispiele/<datei>.json fehlt.'; return; }
+  const spec = await (await fetch(specPath)).json();
+  const inf = await REEL.load(spec);
+  document.getElementById('warn').textContent = inf.warnings.join('\n');
+  const ui = document.getElementById('ui'); ui.hidden = false;
+  const scrub = document.getElementById('scrub'), time = document.getElementById('time'), btn = document.getElementById('play');
+  let t = 0, playing = false, last = 0;
+  const show = () => { REEL.draw(t); scrub.value = String(Math.round((t / inf.duration) * 1000)); time.textContent = `${t.toFixed(2)} s`; };
+  const loop = now => { if (!playing) return; t += (now - last) / 1000; last = now; if (t >= inf.duration) t = 0; show(); requestAnimationFrame(loop); };
+  const toggle = () => { playing = !playing; btn.textContent = playing ? '❚❚' : '▶︎'; if (playing) { last = performance.now(); requestAnimationFrame(loop); } };
+  btn.onclick = toggle;
+  scrub.oninput = () => { t = (scrub.value / 1000) * inf.duration; show(); };
+  addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); toggle(); } });
+  show();
+})();
+</script>
+</body>
+</html>

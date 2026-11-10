@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# reels: Render-Ausgaben
+/reels/**/*.mp4
+/reels/**/*.cues.json
+/reels/**/*.still-*.png
+/reels/**/*.sfx.wav
