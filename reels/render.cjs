@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 /*
- * Formel-Reel rendern: Spec (JSON) -> MP4 (1080x1920) + Cue-Liste für Sounds.
+ * Reel rendern: Spec (JSON) -> MP4 (1080x1920) + Cue-Liste für Sounds.
+ * Das Werkzeug ergibt sich aus dem Ordner der Spec: reels/<werkzeug>/beispiele/<name>.json
  *
- *   node reels/formel/render.cjs reels/formel/beispiele/bu-check-aerzte.json
- *   node reels/formel/render.cjs <spec> --out reel.mp4 --fps 30
- *   node reels/formel/render.cjs <spec> --stills 1.2,4.5,20     # nur Standbilder (QA)
- *   node reels/formel/render.cjs <spec> --draft                 # 15 fps, schneller
- *   node reels/formel/render.cjs <spec> --preview               # Vorschau im Browser
+ *   node reels/render.cjs reels/formel/beispiele/bu-check-aerzte.json
+ *   node reels/render.cjs <spec> --out reel.mp4 --fps 30
+ *   node reels/render.cjs <spec> --stills 1.2,4.5,20     # nur Standbilder (QA)
+ *   node reels/render.cjs <spec> --draft                 # 15 fps, schneller
+ *   node reels/render.cjs <spec> --preview               # Vorschau im Browser
  *
  * Braucht: Node 18+, ffmpeg im PATH, Playwright mit Chromium (npm i -D playwright && npx playwright install chromium).
  */
@@ -16,7 +17,7 @@ const path = require('path');
 const http = require('http');
 const { spawn } = require('child_process');
 
-const ROOT = path.resolve(__dirname, '..'); // reels/
+const ROOT = __dirname; // reels/
 const MIME = { '.html': 'text/html', '.json': 'application/json', '.otf': 'font/otf', '.js': 'text/javascript' };
 
 function parseArgs(argv) {
@@ -30,7 +31,7 @@ function parseArgs(argv) {
     else if (v === '--preview') a.preview = true;
     else if (!a.spec) a.spec = v;
   }
-  if (!a.spec) { console.error('Aufruf: node reels/formel/render.cjs <spec.json> [--out x.mp4] [--fps 30] [--draft] [--stills t1,t2] [--preview]'); process.exit(1); }
+  if (!a.spec) { console.error('Aufruf: node reels/render.cjs <spec.json> [--out x.mp4] [--fps 30] [--draft] [--stills t1,t2] [--preview]'); process.exit(1); }
   return a;
 }
 
@@ -51,10 +52,12 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const specAbs = path.resolve(args.spec);
   if (!specAbs.startsWith(ROOT + path.sep)) { console.error('Die Spec muss unter reels/ liegen.'); process.exit(1); }
-  const specRel = path.relative(path.join(ROOT, 'formel'), specAbs).split(path.sep).join('/');
+  const tool = path.relative(ROOT, specAbs).split(path.sep)[0];
+  if (!fs.existsSync(path.join(ROOT, tool, 'engine.html'))) { console.error(`Kein Werkzeug "${tool}" (reels/${tool}/engine.html fehlt).`); process.exit(1); }
+  const specRel = path.relative(path.join(ROOT, tool), specAbs).split(path.sep).join('/');
   const spec = JSON.parse(fs.readFileSync(specAbs, 'utf8'));
   const server = await serve();
-  const base = `http://127.0.0.1:${server.address().port}/formel/engine.html`;
+  const base = `http://127.0.0.1:${server.address().port}/${tool}/engine.html`;
 
   if (args.preview) {
     console.log(`Vorschau: ${base}?spec=${encodeURIComponent(specRel)}  (Strg+C beendet)`);
@@ -69,6 +72,7 @@ async function main() {
   const fps = args.fps || (args.draft ? 15 : spec.meta?.fps || 30);
   const info = await page.evaluate(([s, f]) => window.REEL.load(s, { fps: f }), [spec, fps]);
   for (const w of info.warnings) console.warn('WARNUNG:', w);
+  if (info.facts) console.log('Berechnete Werte:', JSON.stringify(info.facts));
 
   const stem = specAbs.replace(/\.json$/, '');
   if (args.stills) {

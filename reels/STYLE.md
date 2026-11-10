@@ -49,6 +49,7 @@ Gesamtlänge 25–35 s. Kein Abspann, kein Logo, kein Handle: Das Reel endet auf
 - **Schrift:** Inter Display, SemiBold (600) für normalen Text, Bold (700) für Kernwörter und Titel. Laufweite eng (−3,5 %). Liegt in `fonts/` (OFL-Lizenz).
 - **Größen bei 1080 × 1920:** Captions klein 60 px, groß 100 px. Enthülltes Label in der Nahaufnahme ca. 86 px.
 - **Formen:** dünne Linien, Punkte, klare Geometrie. Keine Schatten, keine Verläufe, keine Icons, keine Emojis.
+- **Sicherer Bereich:** Oben gehört das Drittel bis y ≈ 640 den Captions, unten verdeckt Instagram ab y ≈ 1520 das Bild. Das zentrale Bild liegt dazwischen. Pflicht-Hinweise („keine Garantie“) stehen klein direkt unter der Schluss-Überschrift, nicht am unteren Rand.
 
 ## 4. Bewegung
 
@@ -65,6 +66,7 @@ Gesamtlänge 25–35 s. Kein Abspann, kein Logo, kein Handle: Das Reel endet auf
 | Durchgehend | Yazans Stimme, ca. 165 Wörter/min, ohne Pausen | – |
 | Enthüllung | leise Tipp-Klicks, Spitzen ca. −19 dBFS | `pro_typing_run/soft` |
 | Schnitt auf Schwarz | Whoosh, Spitze genau am Schnitt | `whoosh_fast/crisp` |
+| Etwas wächst (z. B. eine Kurve) | leiser, ansteigender Ton | `pro_riser/roll` |
 | Rauszoomen am Ende | tiefer Sub-Drop | `pro_sub_drop/ref` |
 
 Ziel-Lautheit −14 LUFS (Referenz: −13,7). Die Klicks bleiben leise, laute Sounds gibt es nur an drei Stellen (zwei Karten, Rauszoomen).
@@ -79,8 +81,9 @@ Zusätzlich zu `ralston-content` (Vertrauen statt Viralität, Zielgruppe Ärzte)
 4. **Bezeichnungen kurz:** 1–2 Wörter, höchstens ca. 17 Zeichen.
 5. **Zwei Karten** als ehrliche Open Loops. Behauptungen wie „die meisten …“ nur mit Beleg.
 6. **CTA:** speichern und teilen. In den ersten 6–12 Monaten kein großer Ask.
-7. **Compliance:** keine erfundenen Zahlen, Fälle nur anonymisiert und mit Einwilligung, keine Versicherer herabsetzen. Fachliche Aussagen vor dem Posten prüfen.
-8. **Mit Stimme:** zuerst aufnehmen, dann die Beat-Dauern aus den Wortzeiten setzen.
+7. **Zahlen:** Summen rechnet die Engine aus den Annahmen, nichts wird von Hand eingetragen. Renditen sind immer Annahmen („bei 7 % pro Jahr“), nie Versprechen. Zu jedem Reel mit Zahlen gehört eine Quellen-Datei neben der Spec.
+8. **Compliance:** keine erfundenen Zahlen, Fälle nur anonymisiert und mit Einwilligung, keine Versicherer herabsetzen. Fachliche Aussagen vor dem Posten prüfen.
+9. **Mit Stimme:** zuerst aufnehmen, dann die Beat-Dauern aus den Wortzeiten setzen.
 
 ## 7. Prüffragen vor jedem Reel
 
@@ -94,7 +97,7 @@ Zusätzlich zu `ralston-content` (Vertrauen statt Viralität, Zielgruppe Ärzte)
 
 # Teil B: Werkzeuge
 
-Ein Werkzeug ist ein zentrales Bild plus Engine, die Teil A umsetzt.
+Ein Werkzeug ist ein zentrales Bild plus Engine, die Teil A umsetzt. Alles, was für jedes Reel gilt (Look, Captions, Enthüllung, Karten, Unschärfe), liegt einmal in `core.js`. Ein Werkzeug liefert nur sein Bild und seine Kamera.
 
 ## Werkzeug 1: Oktagon-Diagramm (`formel/`)
 
@@ -108,16 +111,26 @@ Ein Werkzeug ist ein zentrales Bild plus Engine, die Teil A umsetzt.
 
 Bedienung: siehe `README.md`.
 
+## Werkzeug 2: Treppe mit Kurve (`treppe/`)
+
+**Wofür:** ein Plan in Stufen und was daraus wird (Sparplan über die Karriere, Aufbau über Jahre).
+
+- Unten die Treppe: jede Stufe ist eine Phase mit Name und Betrag. Darüber die Kurve mit dem Ergebnis. Beide teilen sich die Altersachse.
+- **Verhüllt:** Namen, Beträge und die Endsummen stehen als schwarze Balken da. Die Kurve fehlt noch.
+- **Nahaufnahme:** Zoom 3 auf eine Stufe, erst tippt sich der Name frei, dann der Betrag.
+- **Kurve:** wächst in 1,9 s von links nach rechts, am Ende tippt sich die Summe frei. Eine zweite, gepunktete Kurve zeigt den vorsichtigen Fall.
+- **Ehrlichkeit als Dramaturgie:** Die zweite Karte stellt den Einwand selbst („Und wenn es schlechter läuft?“), die zweite Kurve beantwortet ihn.
+- Alle Summen werden aus `plan` in der Spec berechnet. Höchstens zwei Szenarien.
+
 ## Weitere Werkzeuge (noch nicht gebaut)
 
 Gleicher Bauplan, anderes Bild. Kandidaten:
 
 | Bild | Passt für |
 |---|---|
-| **Treppe / Zeitstrahl** | Abläufe mit Reihenfolge (z. B. Schritte von der Assistenzzeit bis zur Niederlassung) |
+| **Zeitstrahl** | Abläufe mit Reihenfolge (z. B. Schritte von der Assistenzzeit bis zur Niederlassung) |
 | **Zwei Spalten** | Vergleiche (z. B. gesetzlich vs. privat), Zeile für Zeile aufgedeckt |
 | **Stapel / Liste** | Rangfolgen und Prioritäten |
-| **Eine große Zahl** | Rechenwege, bei denen sich die Zahl Schritt für Schritt aufbaut |
 
 Ein neues Werkzeug muss alle sieben Bauprinzipien aus Teil A erfüllen und Look, Bewegung und Sound unverändert übernehmen.
 

@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Treppen-Reel</title>
+<style>
+  @font-face { font-family: 'ReelDisplay'; src: url('../fonts/InterDisplay-SemiBold.otf') format('opentype'); font-weight: 600; }
+  @font-face { font-family: 'ReelDisplay'; src: url('../fonts/InterDisplay-Bold.otf') format('opentype'); font-weight: 700; }
+  html, body { margin: 0; height: 100%; background: #111; color: #ddd; font: 13px system-ui, sans-serif; }
+  body.preview { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+  body.preview canvas { height: calc(100vh - 56px); width: auto; box-shadow: 0 0 0 1px #333; }
+  #ui { display: flex; align-items: center; gap: 10px; width: min(720px, 96vw); }
+  #ui input { flex: 1; }
+  #ui button { background: #333; color: #eee; border: 0; border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+  #warn { color: #f5a524; max-width: 96vw; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<div id="ui" hidden>
+  <button id="play">▶︎</button>
+  <input id="scrub" type="range" min="0" max="1000" value="0">
+  <span id="time">0.00 s</span>
+</div>
+<div id="warn"></div>
+<script src="../core.js"></script>
+<script>
+'use strict';
+/*
+ * Werkzeug 2: Treppe mit Kurve (STYLE.md Teil B).
+ * Unten die Stufen (was man einzahlt), darüber die Kurve (was daraus wird), gemeinsame Altersachse.
+ * Alle Summen werden aus spec.plan berechnet, nichts wird von Hand eingetragen.
+ * Der Stil selbst (Captions, Enthüllung, Karten, Look) kommt aus ../core.js.
+ */
+
+// Weltmaße: 1 Einheit = 1 px bei Zoom 1 (Übersicht). Inhalt bleibt zwischen y 660 und 1520 (Platz für Captions oben, Instagram-Leiste unten).
+const G = {
+  x0: 120, x1: 920,
+  curveTop: 772, curveBase: 1020, titleCurveY: 706, titleStairsY: 1058,
+  stairBase: 1470, stairMax: 200, ring: 8,
+  nameSize: 24, rateSize: 38, nameUp: 92, rateUp: 48, focusUp: 70,
+  sumSize: 54, sumAlt: 38, subSize: 27, tickSize: 26, goalSize: 27, titleSize: 26,
+  closeZoom: 3, closeAy: 960, maxCloseW: 1240,
+};
+const TM = {
+  move: 0.38, firstZoom: 0.42, toCurve: 0.5, outroZoom: 0.85,
+  introLead: 0.15, stepLead: 0.6, curveLead: 0.5, drawStart: 0.45, drawDur: 1.9,
+};
+const OV = { z: 1, fx: 540, fy: 960, ax: 540, ay: 960 };
+const NB = ' ';
+
+const fmtEuro = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + NB + '€';
+const fmtMio = v => (v / 1e6).toFixed(2).replace('.', ',') + NB + 'Mio.' + NB + '€';
+
+// Sparplan: Einzahlung am Monatsende, monatliche Verzinsung (effektiv = Jahresrendite).
+function simulate(stages, start, end, rate) {
+  const m = Math.pow(1 + rate, 1 / 12) - 1, vals = [0];
+  let v = 0, paid = 0, goalAge = null;
+  for (let k = 0; k < (end - start) * 12; k++) {
+    const age = start + k / 12;
+    const dep = stages.filter(s => age >= s.from).pop().rate;
+    v = v * (1 + m) + dep; paid += dep; vals.push(v);
+  }
+  return { vals, end: v, paid };
+}
+
+function build(spec, ctx, plan) {
+  const p = spec.plan, span = p.end - p.start;
+  const X = age => lerp(G.x0, G.x1, (age - p.start) / span);
+  const maxRate = Math.max(...p.stages.map(s => s.rate));
+  plan.X = X;
+  plan.stages = p.stages.map((s, i) => {
+    const to = p.stages[i + 1] ? p.stages[i + 1].from : p.end;
+    return { ...s, xa: X(s.from), xb: X(to), cx: (X(s.from) + X(to)) / 2, top: G.stairBase - (s.rate / maxRate) * G.stairMax,
+      rateText: fmtEuro(s.rate) + (p.rateUnit || ''), nameWin: null, rateWin: null };
+  });
+  plan.scenarios = p.scenarios.map(sc => {
+    const sim = simulate(p.stages.slice(0, sc.stages || p.stages.length), p.start, p.end, sc.return);
+    return { ...sc, ...sim, sumText: fmtMio(sim.end), drawStart: Infinity, drawEnd: Infinity, sumWin: null };
+  });
+  const vmax = Math.max(...plan.scenarios.map(s => s.end));
+  plan.Yv = v => G.curveBase - (v / vmax) * (G.curveBase - G.curveTop);
+  const top = plan.scenarios.reduce((a, b) => (b.end > a.end ? b : a));
+  plan.scenarios.forEach(sc => { sc.above = sc === top; });
+  plan.facts = plan.scenarios.map(sc => ({ rendite: sc.return, endwert: Math.round(sc.end), eingezahlt: sc.paid, anzeige: sc.sumText.replace(/ /g, ' ') }));
+
+  // Enthüllungen und Kamera
+  const intro = plan.beats.find(b => b.type === 'intro'); plan.introEnd = intro ? intro.end : 0;
+  const segs = []; let cur = { ...OV }, curveCount = 0;
+  for (const b of plan.beats) {
+    let target = null, dur = TM.move, e = ease.inOutCubic;
+    if (b.type === 'step') {
+      const st = plan.stages[b.step];
+      if (!st) { plan.warnings.push(`Stufe ${b.step} existiert nicht.`); continue; }
+      if (!st.nameWin) {
+        st.nameWin = typeWindow(b.start + TC.typeLead, st.name, 0.05, 0.4);
+        st.rateWin = typeWindow(st.nameWin.typeEnd + 0.05, st.rateText, 0.05, 0.4);
+        addTypeCue(plan, st.nameWin, st.name); addTypeCue(plan, st.rateWin, st.rateText);
+      }
+      target = { z: Math.min(G.closeZoom, G.maxCloseW / (st.xb - st.xa)), fx: st.cx, fy: st.top - G.focusUp, ax: 540, ay: G.closeAy };
+      if (!segs.length) { dur = TM.firstZoom; e = ease.inOutQuart; }
+    } else if (b.type === 'curve') {
+      const sc = plan.scenarios[b.scenario];
+      if (!sc) { plan.warnings.push(`Szenario ${b.scenario} existiert nicht.`); continue; }
+      sc.drawStart = b.start + TM.drawStart; sc.drawEnd = sc.drawStart + TM.drawDur;
+      sc.sumWin = typeWindow(sc.drawEnd - 0.1, sc.sumText);
+      plan.cues.push({ kind: 'rise', t: +sc.drawStart.toFixed(3), dur: TM.drawDur });
+      addTypeCue(plan, sc.sumWin, sc.sumText);
+      target = curveCount++ === 0 ? { z: 1.18, fx: 520, fy: 850, ax: 540, ay: 1010 } : { z: 1.35, fx: 620, fy: 870, ax: 540, ay: 1080 };
+      dur = TM.toCurve;
+    } else if (b.type === 'outro') {
+      target = { ...OV }; dur = TM.outroZoom; e = ease.outCubic;
+    }
+    if (target) { segs.push({ t0: b.start, t1: b.start + dur, from: { ...cur }, to: target, ease: e }); cur = target; }
+  }
+  plan.segments = segs;
+  const outro = plan.beats.find(b => b.type === 'outro');
+  const shown = outro ? { typeStart: outro.start, typeEnd: outro.start } : { typeStart: Infinity, typeEnd: Infinity };
+  for (const st of plan.stages) if (!st.nameWin) { st.nameWin = shown; st.rateWin = shown; }
+  for (const sc of plan.scenarios) if (!sc.sumWin) { sc.sumWin = shown; if (outro) { sc.drawStart = sc.drawEnd = outro.start; } }
+}
+
+const leadFor = b => (b.type === 'step' ? TM.stepLead : b.type === 'intro' ? TM.introLead : b.type === 'curve' ? TM.curveLead : TM.outroZoom + 0.25);
+
+function poseAt(plan, t) {
+  if (t < plan.introEnd) return { ...OV, z: lerp(0.93, 1, ease.outCubic(clamp(t / plan.introEnd))) };
+  let pose = OV;
+  for (const s of plan.segments) {
+    if (t < s.t0) break;
+    if (t >= s.t1) { pose = s.to; continue; }
+    const p = s.ease(clamp((t - s.t0) / (s.t1 - s.t0))), a = s.from, b = s.to;
+    return { z: Math.exp(lerp(Math.log(a.z), Math.log(b.z), p)), fx: lerp(a.fx, b.fx, p), fy: lerp(a.fy, b.fy, p), ax: lerp(a.ax, b.ax, p), ay: lerp(a.ay, b.ay, p) };
+  }
+  return pose;
+}
+
+function motionPx(plan, t, dt) {
+  const a = poseAt(plan, t), b = poseAt(plan, t + dt); let px = 0;
+  for (const [wx, wy] of [[G.x0, G.curveTop], [G.x1, G.stairBase]]) {
+    px = Math.max(px, Math.hypot((wx - b.fx) * b.z + b.ax - ((wx - a.fx) * a.z + a.ax), (wy - b.fy) * b.z + b.ay - ((wy - a.fy) * a.z + a.ay)));
+  }
+  return px;
+}
+
+function drawWorld(ctx, plan, t, grid) {
+  const spec = plan.spec.plan, P = poseAt(plan, t), z = P.z;
+  const X = wx => (wx - P.fx) * z + P.ax, Y = wy => (wy - P.fy) * z + P.ay;
+  const inIntro = t < plan.introEnd;
+  const lineP = inIntro ? ease.outCubic(clamp((t - 0.15) / 0.6)) : 1;
+  const grow = i => (inIntro ? ease.outCubic(clamp((t - 0.1 - i * 0.12) / 0.5)) : 1);
+  ctx.fillStyle = COL.bg; ctx.fillRect(0, 0, W, H); ctx.drawImage(grid, 0, 0);
+  ctx.lineCap = 'butt'; ctx.lineJoin = 'miter'; ctx.setLineDash([]);
+
+  // Kurvenfeld: Hilfslinien, Grundlinie, Ziel-Linie
+  ctx.strokeStyle = COL.ink; ctx.globalAlpha = 0.16 * lineP; ctx.lineWidth = Math.max(1, 1.4 * z); ctx.setLineDash([2 * z, 7 * z]);
+  for (const st of plan.stages.slice(1)) { ctx.beginPath(); ctx.moveTo(X(st.xa), Y(G.curveBase)); ctx.lineTo(X(st.xa), Y(G.curveTop)); ctx.stroke(); }
+  ctx.setLineDash([]); ctx.globalAlpha = 1; ctx.lineWidth = Math.max(1.5, 2 * z);
+  ctx.beginPath(); ctx.moveTo(X(G.x0), Y(G.curveBase)); ctx.lineTo(X(lerp(G.x0, G.x1, lineP)), Y(G.curveBase)); ctx.stroke();
+  if (spec.goal) {
+    const gy = plan.Yv(spec.goal);
+    ctx.globalAlpha = 0.5; ctx.lineWidth = Math.max(1, 1.6 * z); ctx.setLineDash([10 * z, 8 * z]);
+    ctx.beginPath(); ctx.moveTo(X(G.x0), Y(gy)); ctx.lineTo(X(lerp(G.x0, G.x1, lineP)), Y(gy)); ctx.stroke();
+    ctx.setLineDash([]); ctx.globalAlpha = 0.72 * lineP; ctx.fillStyle = COL.ink; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    setFont(ctx, G.goalSize * z, 600); ctx.fillText(spec.goalLabel || '', X(G.x0), Y(gy - 12));
+    ctx.globalAlpha = 1;
+  }
+
+  // Bereichs-Titel: sagen, was Kurve und Treppe zeigen
+  ctx.globalAlpha = 0.55 * lineP; ctx.fillStyle = COL.ink; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; setFont(ctx, G.titleSize * z, 600);
+  if (spec.titles?.curve) ctx.fillText(spec.titles.curve, X(G.x0), Y(G.titleCurveY));
+  if (spec.titles?.stairs) ctx.fillText(spec.titles.stairs, X(G.x0), Y(G.titleStairsY));
+  ctx.globalAlpha = 1;
+
+  // Treppe: Außenlinie, Füllung, Innenlinie (gleiche Ring-Optik wie der Hub)
+  const tops = plan.stages.map((st, i) => G.stairBase - (G.stairBase - st.top) * grow(i));
+  const path = (off) => {
+    ctx.beginPath();
+    plan.stages.forEach((st, i) => {
+      const xa = st.xa - off, top = tops[i] - off;
+      if (!i) ctx.moveTo(X(xa), Y(G.stairBase)); else ctx.lineTo(X(xa), Y(tops[i - 1] - off));
+      ctx.lineTo(X(xa), Y(top));
+      if (i === plan.stages.length - 1) { ctx.lineTo(X(st.xb + off), Y(top)); ctx.lineTo(X(st.xb + off), Y(G.stairBase)); }
+      else ctx.lineTo(X(plan.stages[i + 1].xa - off), Y(top));
+    });
+  };
+  ctx.strokeStyle = COL.hub; ctx.lineWidth = Math.max(1.5, 2.2 * z); path(G.ring); ctx.stroke();
+  ctx.fillStyle = COL.hub; path(0); ctx.closePath(); ctx.fill();
+  ctx.save(); path(0); ctx.closePath(); ctx.clip();
+  ctx.strokeStyle = COL.hubLine; ctx.lineWidth = Math.max(1, 1.5 * z); path(-G.ring); ctx.stroke(); ctx.restore();
+  ctx.strokeStyle = COL.ink; ctx.lineWidth = Math.max(1.5, 2 * z);
+  ctx.beginPath(); ctx.moveTo(X(G.x0 - 30), Y(G.stairBase)); ctx.lineTo(X(G.x1 + 30), Y(G.stairBase)); ctx.stroke();
+
+  // Altersachse
+  ctx.fillStyle = COL.ink; ctx.textBaseline = 'alphabetic'; ctx.globalAlpha = lineP;
+  setFont(ctx, G.tickSize * z, 600); ctx.textAlign = 'center';
+  for (const age of [...plan.stages.map(s => s.from), spec.end]) {
+    ctx.fillRect(X(plan.X(age)) - z, Y(G.stairBase), 2 * z, 9 * z);
+    ctx.fillText(String(age), X(plan.X(age)), Y(G.stairBase + 42));
+  }
+  if (spec.ageLabel) { ctx.globalAlpha = 0.55 * lineP; setFont(ctx, G.goalSize * z, 600); ctx.textAlign = 'right'; ctx.fillText(spec.ageLabel, X(G.x0 - 28), Y(G.stairBase + 42)); }
+  ctx.globalAlpha = 1;
+
+  // Stufen-Labels: Name und Sparrate, tippen sich frei
+  plan.stages.forEach((st, i) => {
+    const a = clamp(grow(i) * 2 - 1); if (a <= 0) return;
+    const top = tops[i];
+    ctx.globalAlpha = a; ctx.fillStyle = COL.ink;
+    ctx.beginPath(); ctx.arc(X(st.cx), Y(top - G.ring), 5 * z, 0, Math.PI * 2); ctx.fill();
+    ctx.fillRect(X(st.cx) - z * 0.9, Y(top - G.ring - 16), 1.8 * z, 16 * z);
+    ctx.globalAlpha = 1;
+    drawTyped(ctx, st.rateText, st.rateWin, t, X(st.cx), Y(top - G.rateUp), G.rateSize * z, 700, { alpha: a });
+    drawTyped(ctx, st.name, st.nameWin, t, X(st.cx), Y(top - G.nameUp), G.nameSize * z, 600, { alpha: a });
+  });
+
+  // Kurven und Endsummen
+  for (const sc of plan.scenarios) {
+    const endY = plan.Yv(sc.end), size = (sc.above ? G.sumSize : G.sumAlt) * z;
+    const sumY = sc.above ? endY - 58 : G.curveBase - 54, subY = sc.above ? sumY - 46 : G.curveBase - 20;
+    if (t >= sc.drawStart) {
+      const prog = sc.drawEnd > sc.drawStart ? ease.inOutQuad(clamp((t - sc.drawStart) / (sc.drawEnd - sc.drawStart))) : 1;
+      const months = prog * (sc.vals.length - 1);
+      ctx.strokeStyle = COL.ink; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+      ctx.lineWidth = (sc.above ? 5 : 3.4) * z; ctx.setLineDash(sc.dashed ? [1 * z, 9 * z] : []);
+      ctx.beginPath();
+      const pt = k => [X(lerp(G.x0, G.x1, k / (sc.vals.length - 1))), Y(plan.Yv(lerp(sc.vals[Math.floor(k)], sc.vals[Math.min(sc.vals.length - 1, Math.floor(k) + 1)], k - Math.floor(k))))];
+      for (let k = 0; k < months; k += 3) { const [x, y] = pt(k); k ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+      const [hx, hy] = pt(months); ctx.lineTo(hx, hy); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = COL.ink; ctx.beginPath(); ctx.arc(hx, hy, (sc.above ? 9 : 7) * z, 0, Math.PI * 2); ctx.fill();
+      if (!sc.above && prog >= 1) { // Führungslinie vom Endpunkt zur Summe darunter
+        ctx.globalAlpha = 0.45; ctx.fillRect(X(G.x1) - z * 0.8, Y(endY + 14), 1.6 * z, (sumY - 20 - endY - 14) * z); ctx.globalAlpha = 1;
+      }
+    }
+    drawTyped(ctx, sc.sumText, sc.sumWin, t, X(G.x1 + 10), Y(sumY), size, 700, { align: 'right', alpha: lineP });
+    const subA = clamp((t - sc.sumWin.typeEnd) / 0.3);
+    if (sc.sub && subA > 0) {
+      ctx.globalAlpha = 0.62 * subA; ctx.fillStyle = COL.ink; ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic';
+      setFont(ctx, G.subSize * z, 600); ctx.fillText(sc.sub, X(G.x1 + 10), Y(subY + G.subSize * CAP / 2)); ctx.globalAlpha = 1;
+    }
+  }
+}
+
+createReel({ build, leadFor, drawWorld, motionPx });
+</script>
+</body>
+</html>

@@ -3,7 +3,7 @@
 Sound-Layer für Formel-Reels: synthetisiert die Stil-Sounds aus der Cue-Liste
 (render.cjs schreibt <video>.cues.json) und mischt sie unter das Video.
 
-    python3 reels/formel/sfx.py <video.cues.json> <video.mp4> [ausgabe.mp4] [--vo stimme.wav]
+    python3 reels/sfx.py <video.cues.json> <video.mp4> [ausgabe.mp4] [--vo stimme.wav]
 
 Alles wird im Code erzeugt (nur numpy), keine fremden Aufnahmen.
 Zuordnung zum earshot-Kit, falls dort gerendert wird: siehe reels/STYLE.md §5.
@@ -67,6 +67,19 @@ def sub_drop(dur=1.1, f0=95, f1=36):
     return (np.sin(phase) + 0.18 * np.sin(2 * phase)) * env + click
 
 
+def rise(dur=1.9):
+    """Leiser Anstieg, während eine Kurve wächst: Ton gleitet nach oben, Rauschen öffnet sich."""
+    n = int(dur * SR)
+    p = np.linspace(0, 1, n)
+    f = 150 * (3.2 ** (p ** 1.6))
+    phase = 2 * np.pi * np.cumsum(f) / SR
+    env = np.minimum(1, p / 0.15) ** 2 * np.minimum(1, (1 - p) / 0.04)
+    tone = np.sin(phase) + 0.3 * np.sin(2 * phase)
+    air = one_pole_lowpass(RNG.standard_normal(n), 500 + 5000 * p ** 2)
+    air = air / (np.abs(air).max() + 1e-9)
+    return (0.6 * tone + 0.5 * air * p) * env * (0.35 + 0.65 * p)
+
+
 def place(bus, sig, t, gain_db):
     sig = sig if sig.ndim == 2 else np.stack([sig, sig], axis=1)
     i = int(round(t * SR))
@@ -84,6 +97,8 @@ def build(cues, duration):
             step = c["dur"] / max(1, c["chars"])
             for k in range(c["chars"]):
                 place(bus, tick(), c["t"] + k * step, -21 + RNG.uniform(-2, 2))
+        elif c["kind"] == "rise":
+            place(bus, rise(c["dur"]), c["t"], -15)
         elif c["kind"] == "cardIn":
             place(bus, whoosh(), c["t"] - 0.42 * 0.78, -11)
         elif c["kind"] == "outro":

@@ -1,0 +1,120 @@
+{
+  "meta": {
+    "title": "Als Arzt zur Rente Millionär",
+    "fps": 30
+  },
+  "plan": {
+    "start": 27,
+    "end": 67,
+    "stages": [
+      {
+        "from": 27,
+        "name": "Assistenzarzt",
+        "rate": 500
+      },
+      {
+        "from": 37,
+        "name": "Oberarzt",
+        "rate": 1000
+      },
+      {
+        "from": 47,
+        "name": "Chefarzt",
+        "rate": 1500
+      }
+    ],
+    "goal": 1000000,
+    "goalLabel": "1 Mio. €",
+    "ageLabel": "Alter",
+    "scenarios": [
+      {
+        "return": 0.07,
+        "sub": "bei 7 % pro Jahr"
+      },
+      {
+        "return": 0.05,
+        "stages": 2,
+        "dashed": true,
+        "sub": "ohne Chefarzt, bei 5 %"
+      }
+    ],
+    "titles": {
+      "curve": "Dein Depot",
+      "stairs": "Deine Sparrate pro Monat"
+    }
+  },
+  "timeline": [
+    {
+      "type": "intro",
+      "dur": 3.0,
+      "captions": [
+        "Als Arzt kannst du",
+        "zur Rente | *Millionär* sein.",
+        "In *drei Stufen.*"
+      ]
+    },
+    {
+      "type": "step",
+      "step": 0,
+      "dur": 3.0,
+      "captions": [
+        "Mit 27 startest du:",
+        "*500 €* im Monat | in einen Welt-ETF."
+      ]
+    },
+    {
+      "type": "step",
+      "step": 1,
+      "dur": 2.4,
+      "captions": [
+        "Als Oberarzt",
+        "*verdoppelst* du."
+      ]
+    },
+    {
+      "type": "step",
+      "step": 2,
+      "dur": 2.4,
+      "captions": [
+        "Als Chefarzt",
+        "nochmal | *500 € mehr.*"
+      ]
+    },
+    {
+      "type": "card",
+      "dur": 2.2,
+      "text": "Aber das meiste Geld | *zahlst nicht du ein.*"
+    },
+    {
+      "type": "curve",
+      "scenario": 0,
+      "dur": 5.0,
+      "captions": [
+        "Eingezahlt hast du | *540.000 €.*",
+        "Bei 7 % Rendite im Jahr",
+        "werden daraus | *über 2 Millionen.*"
+      ]
+    },
+    {
+      "type": "card",
+      "dur": 2.4,
+      "text": "Und wenn es | *schlechter läuft?*"
+    },
+    {
+      "type": "curve",
+      "scenario": 1,
+      "dur": 4.6,
+      "captions": [
+        "Kein Chefarzt.",
+        "Nur 5 % Rendite.",
+        "*Trotzdem Millionär.*"
+      ]
+    },
+    {
+      "type": "outro",
+      "dur": 5.0,
+      "header": "Screenshot machen",
+      "footnote": "Rechenbeispiel, keine Garantie. Renditen sind Annahmen, | vor Kosten, Steuern und Inflation."
+    }
+  ]
+}
