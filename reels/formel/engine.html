@@ -35,7 +35,7 @@ const FONT = "'ReelDisplay', 'Inter Display', 'Inter', system-ui, sans-serif";
 
 const COL = {
   bg: '#F7F5F6', ink: '#141213', hub: '#292725', hubLine: 'rgba(247,245,246,0.92)',
-  card: '#0B090A', white: '#FFFFFF', endDim: 'rgba(22,22,22,0.80)',
+  card: '#0B090A', white: '#FFFFFF',
 };
 
 // Weltmaße: 1 Einheit = 1 px bei Zoom 1 (Übersicht).
@@ -54,10 +54,7 @@ const TM = {
   turn: 0.38, firstZoom: 0.42, outroZoom: 0.85,
   typeLead: 0.10, perChar: 0.065, minType: 0.30, maxType: 0.55, caret: 0.30,
   wordIn: 0.13, spokeLead: 0.55, introLead: 0.15, cardLead: 0.12, tail: 0.05,
-  endPop: 0.35, endGradient: 2.2,
 };
-
-const IG_STOPS = ['#FEDA75', '#FA7E1E', '#D62976', '#962FBF', '#4F5BD5'];
 
 // ---------- Helfer ----------
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
@@ -150,7 +147,6 @@ function buildPlan(spec) {
   for (const b of beats) {
     if (b.type === 'card') plan.cues.push({ kind: 'cardIn', t: +b.start.toFixed(3) });
     if (b.type === 'outro') plan.cues.push({ kind: 'outro', t: +b.start.toFixed(3) });
-    if (b.type === 'end') plan.cues.push({ kind: 'end', t: +b.start.toFixed(3) });
   }
   return plan;
 }
@@ -351,29 +347,6 @@ function drawPhrase(ctx, p, t, y0, color, small, big, center) {
   });
 }
 
-function drawGlyph(ctx, cx, cy, size, mode, alpha, phase = 0) {
-  ctx.save(); ctx.globalAlpha = alpha;
-  let style = mode === 'white' ? COL.white : COL.ink;
-  if (mode === 'gradient') {
-    const a = deg(225 + phase * 120), rr = size * 0.75;
-    const g = ctx.createLinearGradient(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, cx - Math.cos(a) * rr, cy - Math.sin(a) * rr);
-    IG_STOPS.forEach((c, i) => g.addColorStop(i / (IG_STOPS.length - 1), c));
-    style = g;
-  }
-  ctx.strokeStyle = style; ctx.fillStyle = style; ctx.lineWidth = size * 0.09;
-  const s = size / 2 - ctx.lineWidth / 2;
-  ctx.beginPath(); ctx.roundRect(cx - s, cy - s, 2 * s, 2 * s, size * 0.28); ctx.stroke();
-  ctx.beginPath(); ctx.arc(cx, cy, size * 0.22, 0, Math.PI * 2); ctx.stroke();
-  ctx.beginPath(); ctx.arc(cx + size * 0.255, cy - size * 0.255, size * 0.055, 0, Math.PI * 2); ctx.fill();
-  ctx.restore();
-}
-
-function drawHandle(ctx, text, x, y, size, color, align, alpha) {
-  ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'alphabetic';
-  ctx.font = `700 ${size}px ${FONT}`; ctx.letterSpacing = `${(0.02 * size).toFixed(2)}px`;
-  ctx.fillText(text.toUpperCase(), x, y); ctx.restore();
-}
-
 // ---------- Engine ----------
 const REEL = (() => {
   const canvas = document.getElementById('c');
@@ -397,12 +370,11 @@ const REEL = (() => {
   }
 
   function draw(t) {
-    const spec = plan.spec, beat = beatAt(plan, t), handle = spec.brand?.handle || '';
+    const beat = beatAt(plan, t);
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.filter = 'none'; ctx.globalAlpha = 1;
     if (beat.type === 'card') {
       ctx.fillStyle = COL.card; ctx.fillRect(0, 0, W, H); ctx.drawImage(gridDark, 0, 0);
       for (const p of plan.phrases) if (p.beat === plan.beats.indexOf(beat)) drawPhrase(ctx, p, t, L.cardY, COL.white, L.cardSmall, L.cardBig, true);
-      if (handle) { drawGlyph(ctx, 104, 1176, 46, 'white', 1); drawHandle(ctx, handle, 81, 1250, 24, COL.white, 'left', 1); }
       ctx.restore(); return;
     }
     renderWorldBlurred(t);
@@ -417,29 +389,6 @@ const REEL = (() => {
       const hp = plan._header || (plan._header = { lines: parsePhrase(`*${outro.header}*`).lines, seed: 0 });
       hp.lines.flat().forEach(w => { w.t = outro.start + 0.12; });
       drawPhrase(ctx, hp, t, L.headerY, COL.ink, L.headerSize, L.headerSize, true);
-    }
-    // Wasserzeichen
-    const end = plan.beats.find(b => b.type === 'end');
-    if (handle && spec.brand?.watermark !== false && !(end && t >= end.start)) {
-      const firstSpoke = plan.beats.find(b => b.type === 'spoke');
-      const flash = spec.brand?.flash !== false && firstSpoke && t >= firstSpoke.start && t < firstSpoke.end;
-      drawGlyph(ctx, 972, 448, 40, flash ? 'gradient' : 'ink', flash ? 1 : 0.15, t);
-      drawHandle(ctx, handle, 972, 516, 19, COL.ink, 'center', 0.13);
-    }
-    // Endkarte
-    if (end && t >= end.start) {
-      const te = t - end.start;
-      ctx.fillStyle = COL.endDim; ctx.globalAlpha = clamp(te / 0.08); ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
-      const s = ease.outBack(clamp((te - 0.04) / TM.endPop));
-      const gy = L.overviewY - 72;
-      if (s > 0) {
-        const white = clamp((te - TM.endGradient) / 0.4);
-        ctx.save(); ctx.translate(W / 2, gy); ctx.scale(s, s); ctx.translate(-W / 2, -gy);
-        drawGlyph(ctx, W / 2, gy, 128, 'gradient', 1 - white, te * 0.8);
-        if (white > 0) drawGlyph(ctx, W / 2, gy, 128, 'white', white);
-        ctx.restore();
-      }
-      drawHandle(ctx, handle, W / 2, gy + 124, 40, COL.white, 'center', clamp((te - 0.12) / 0.2));
     }
     ctx.restore();
   }

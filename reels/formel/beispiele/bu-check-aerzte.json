@@ -1,6 +1,5 @@
 {
   "meta": { "title": "BU-Check für Ärzte", "fps": 30 },
-  "brand": { "handle": "Yazan Omran", "watermark": true, "flash": true },
   "hub": { "kicker": "Checkliste", "title": "BU für Ärzte" },
   "spokes": [
     "Verweisung",
@@ -24,7 +23,6 @@
     { "type": "card", "dur": 2.2, "text": "Und hier entscheidet sich, | *ob gezahlt wird.*" },
     { "type": "spoke", "spoke": 6, "dur": 2.5, "captions": ["Vollständig beantworten.", "Sonst droht | *der Rücktritt.*"] },
     { "type": "spoke", "spoke": 7, "dur": 2.3, "captions": ["Jünger und gesünder", "*heißt günstiger.*"] },
-    { "type": "outro", "dur": 3.6, "header": "Screenshot machen", "captions": ["Und schick's einem | *Kollegen.*"] },
-    { "type": "end", "dur": 3.2 }
+    { "type": "outro", "dur": 4.6, "header": "Screenshot machen", "captions": ["Und schick's einem | *Kollegen.*"] }
   ]
 }

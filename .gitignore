@@ -45,3 +45,4 @@ next-env.d.ts
 /reels/**/*.cues.json
 /reels/**/*.still-*.png
 /reels/**/*.sfx.wav
+__pycache__/

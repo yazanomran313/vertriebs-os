@@ -1,13 +1,13 @@
 # Reels
 
-Code-gerenderte Reels im **Formel-Stil** (Oktagon-Diagramm, geschwärzte Labels, Kinetic Typography).
-Der Stil ist in [`STYLE.md`](STYLE.md) definiert. Die Engine setzt ihn 1:1 um, ein Reel ist nur noch eine JSON-Datei.
+Code-gerenderte Reels in unserem Stil. Der Stil selbst (Bauplan, Look, Bewegung, Sound) steht in [`STYLE.md`](STYLE.md) und gilt für jedes Reel.
+Dieses README beschreibt das erste Werkzeug dafür: das **Oktagon-Diagramm** in `formel/`. Ein Reel ist hier nur eine JSON-Datei.
 
 ```
 reels/
-  STYLE.md                 Stilbibel (Maße, Timing, Sound, Skript-Regeln)
+  STYLE.md                 Der Stil (Teil A) und die Werkzeuge (Teil B)
   fonts/                   Inter Display (OFL)
-  formel/
+  formel/                  Werkzeug 1: Oktagon-Diagramm
     engine.html            Renderer (Canvas). Jedes Frame ist eine Funktion der Zeit.
     render.cjs             Spec → MP4 + Cue-Liste (Playwright + ffmpeg)
     sfx.py                 Sound-Layer aus der Cue-Liste (numpy + ffmpeg)
@@ -42,15 +42,13 @@ Render-Ausgaben (`*.mp4`, `*.cues.json`, `*.still-*.png`) sind in `.gitignore` u
 ```jsonc
 {
   "meta":  { "title": "BU-Check für Ärzte", "fps": 30 },
-  "brand": { "handle": "Yazan Omran", "watermark": true, "flash": true },
   "hub":   { "kicker": "Checkliste", "title": "BU für Ärzte" },
   "spokes": ["Verweisung", "Nachversicherung", "…"],   // im Uhrzeigersinn ab oben, 5–10 Stück
   "timeline": [
     { "type": "intro", "dur": 3.0, "captions": ["Unterschreib", "keine BU,", "diese | *8 Punkte*"] },
     { "type": "spoke", "spoke": 0, "dur": 2.3, "captions": ["Kein Verweis", "auf einen | *anderen Beruf.*"] },
     { "type": "card",  "dur": 2.2, "text": "Aber dieser Punkt | *ist für Ärzte Pflicht.*" },
-    { "type": "outro", "dur": 3.6, "header": "Screenshot machen", "captions": ["Und schick's einem | *Kollegen.*"] },
-    { "type": "end",   "dur": 3.2 }
+    { "type": "outro", "dur": 4.6, "header": "Screenshot machen", "captions": ["Und schick's einem | *Kollegen.*"] }
   ]
 }
 ```
@@ -59,10 +57,11 @@ Render-Ausgaben (`*.mp4`, `*.cues.json`, `*.still-*.png`) sind in `.gitignore` u
 - **Ohne Stimme** verteilt die Engine die Wörter gleichmäßig über den Beat. Wird es zu schnell zum Mitlesen (< 0,2 s pro Wort), warnt der Renderer.
 - **Mit Stimme:** Phrasen als Objekt mit Startzeit relativ zum Beat-Beginn angeben, z. B. `{ "text": "Kein Verweis", "at": 0.6 }`. Die Beat-Dauern (`dur`) aus den Wortzeiten der Aufnahme setzen.
 - Jede Speiche sollte genau einen `spoke`-Beat haben. Speichen ohne Beat werden im Outro aufgedeckt.
+- Das Reel endet auf dem `outro` (Gesamtbild). Es gibt kein Handle, kein Logo und keine Endkarte.
 
 ## QA vor dem Posten
 
 1. Renderer meldet keine Warnungen.
 2. Kontaktbogen anschauen: `ffmpeg -i reel.mp4 -vf "fps=1.5,scale=216:-1,tile=10x5" bogen.png`
 3. Lautheit mit Stimme ca. −14 LUFS: `ffmpeg -i reel-final.mp4 -af ebur128 -f null -`
-4. Inhalte nach `STYLE.md` §5 (Compliance) fachlich gegenlesen.
+4. Inhalte nach `STYLE.md` §6 (Compliance) fachlich gegenlesen.

@@ -1,133 +1,129 @@
-# Formel-Reel: Stilbibel
+# Unser Reel-Stil
 
 Abgeleitet aus einem Referenz-Reel (Frame-für-Frame-Analyse, 27,6 s, 9:16, 30 fps).
-Alle Zahlen sind gemessen, nicht geschätzt, außer wo „Richtwert“ steht.
-Die Engine in `formel/` setzt genau diese Werte um.
+
+**Der Stil ist der Bauplan, nicht das Oktagon.** Teil A gilt für jedes Reel, egal mit welchem Bild es arbeitet.
+Teil B beschreibt das Oktagon-Diagramm als ein Werkzeug, das diesen Bauplan umsetzt. Weitere Werkzeuge kommen dazu.
 
 ---
 
-## 1. Warum der Stil funktioniert (das Prinzip, nicht die Optik)
+# Teil A: Der Stil (gilt für jedes Reel)
 
-1. **Ein Framework als Diagramm.** Das Reel liefert ein Bild, das man speichern will. „Screenshot machen“ ist der eingebaute CTA. Saves und Shares sind das Ziel, nicht Likes.
-2. **Geschwärzte Labels = offene Schleifen.** Jede Speiche startet als schwarzer Balken. Der Zuschauer bleibt, bis alles enthüllt ist.
-3. **Das Reel lebt seine eigene Formel.** Die Referenz erklärt Hook → Versprechen → Wert → Open Loop → Wert → Open Loop → Wert → CTA und ist selbst exakt so gebaut. Struktur und Inhalt beweisen sich gegenseitig.
-4. **Zwei harte Pattern-Interrupts.** Schnitt auf Schwarz bei ca. 35 % und ca. 58 % der Laufzeit, jeweils mit einem „Aber …“-Satz.
-5. **Ständige Bewegung, nie Hektik.** Alle 0,3–0,5 s erscheint ein Wort, alle 1,5–2,5 s bewegt sich die Kamera. Kein Frame steht länger als ca. 0,6 s still.
-6. **Belohnung am Ende.** Rauszoomen auf die komplette Übersicht. Erst dann sieht man das Ganze: Payoff und Screenshot-Moment.
+## 1. Die sieben Bauprinzipien
 
-**Harte Wahrheit:** Die Optik ist Verpackung, Ralstons dritter und schwächster Hebel. Ohne ein Framework, das Ärzte wirklich speichern wollen, ist das Oktagon leer. Erst das Framework, dann der Stil.
+1. **Ein Bild, das das ganze Reel trägt.** Es gibt genau ein zentrales visuelles Objekt (Diagramm, Liste, Treppe, Vergleich). Alles passiert an diesem Objekt. Keine wechselnden Szenen, keine Stock-Bilder.
+2. **Erst das Ganze verhüllt zeigen, dann Stück für Stück aufdecken.** In den ersten 2 Sekunden sieht man die komplette Struktur, aber alle Inhalte sind geschwärzt. Jeder verhüllte Teil ist eine offene Schleife. Der Zuschauer bleibt, bis alles aufgedeckt ist.
+3. **Ein Punkt pro Beat, groß im Bild.** Die Kamera geht nah an genau einen Teil, der wird enthüllt und in einem Satz erklärt. Dann weiter zum nächsten. Ca. 2 s pro Punkt.
+4. **Das Wort führt, das Bild folgt.** Die Stimme läuft durch, praktisch ohne Pausen. Captions erscheinen Wort für Wort im Sprechtakt. Das Kernwort ist groß und fett, Füllwörter klein.
+5. **Zwei harte Brüche.** Bei ca. 35 % und ca. 58 % der Laufzeit ein harter Schnitt auf eine schwarze Fläche mit einem „Aber …“-Satz. Das ist ein Open Loop: Er verspricht, dass das Wichtigste noch kommt.
+6. **Ständige Bewegung, nie Hektik.** Alle 0,3–0,5 s erscheint ein Wort, alle 1,5–2,5 s bewegt sich die Kamera. Kein Frame steht länger als ca. 0,6 s still. Aber es bewegt sich immer nur eine Sache.
+7. **Belohnung am Ende.** Rauszoomen auf das komplett aufgedeckte Bild. Erst jetzt sieht man alles auf einmal. Das ist der Moment zum Speichern („Screenshot machen“) und gleichzeitig der CTA.
 
----
+## 2. Dramaturgie (der Ablauf)
 
-## 2. Dramaturgie der Referenz (Beat-Sheet)
+Die Referenz erklärt eine Formel und ist selbst nach dieser Formel gebaut:
 
-| Zeit (s) | Beat | Was passiert |
+| Abschnitt | Anteil | Aufgabe |
 |---|---|---|
-| 0,0–2,3 | Intro / Hook | Kleiner Hub wächst, 8 Speichen mit schwarzen Balken schießen raus. Hook-Wörter einzeln oben. |
-| 2,3–4,0 | Speiche 1 | Schneller Zoom (ca. 0,4 s) auf Speiche oben, Label tippt sich frei, Caption darüber. |
-| 4,0–6,7 | Speiche 2 | Rotation 45° (0,38 s, Motion Blur), nächstes Label tippt. |
-| 6,7–8,3 | Speiche 3 | dito |
-| 8,3–9,7 | Speiche 4 (Open Loop 1) | dito |
-| 9,7–11,8 | **Schwarze Karte 1** | Harter Schnitt. „But there's one more thing.“ Wort für Wort, klein/groß gemischt. |
-| 11,8–15,8 | Speichen 5–6 | zurück ins Diagramm, Rotation geht weiter |
-| 15,8–17,4 | **Schwarze Karte 2** | „But this is where most people mess up.“ |
-| 17,4–20,1 | Speichen 7–8 | Wert, CTA |
-| 20,1–23,5 | Outro | Rauszoomen + Rückdrehen (0,8 s) auf die Gesamtübersicht, Header „Screenshot this“. |
-| 23,5–27,5 | Endkarte | Bild abgedunkelt, Logo poppt im Hub auf, Handle darunter. 4 s Halt. |
+| **Hook** | 0–8 % (ca. 2–3 s) | Schmerz oder Versprechen in einem Satz. Gleichzeitig baut sich das verhüllte Bild auf. |
+| **Versprechen** | erster Punkt | Sagt, was man bekommt. Erste Enthüllung. |
+| **Wert** | 2–3 Punkte | Ein Satz pro Punkt. |
+| **Open Loop 1** | ca. 35 % | Schwarze Karte: „Aber …“ |
+| **Wert** | 2–3 Punkte | |
+| **Open Loop 2** | ca. 58 % | Schwarze Karte: „Und hier …“ |
+| **Wert** | letzte Punkte | Der stärkste Punkt kommt nach der zweiten Karte. |
+| **Payoff + CTA** | letzte 12–15 % (ca. 3–4 s) | Gesamtbild, „Screenshot machen“, ruhig stehen lassen. |
 
-Rhythmus: ca. 2 s pro Speiche, Karten 1,6–2,1 s, Outro ca. 3,4 s, Endkarte ca. 4 s.
+Gesamtlänge 25–35 s. Kein Abspann, kein Logo, kein Handle: Das Reel endet auf dem Gesamtbild.
 
----
+## 3. Look
 
-## 3. Visuelles System
-
-### Farben
 | Rolle | Wert |
 |---|---|
-| Hintergrund hell | `#F7F5F6` + Punktraster (18 px Abstand, 1,3 px Punkte, ca. 12 % Deckkraft, zum Rand auslaufend) |
-| Tinte (Text, Linien, Balken) | `#141213` |
-| Hub-Füllung | `#292725` |
-| Karte (Interrupt) | `#0B090A` + helles Punktraster ca. 5 % + Vignette |
-| Endkarte | Übersicht mit 80 % Abdunklung (wirkt `#3C3C3C`) |
-| Einziger Farbakzent | Instagram-Verlauf am Logo (Wasserzeichen-Blitz in Speiche 1, Endkarte) |
+| Hintergrund | fast weiß `#F7F5F6` mit feinem Punktraster (18 px Abstand, ca. 12 % Deckkraft) |
+| Tinte (Text, Linien, Balken) | fast schwarz `#141213` |
+| Dunkle Flächen | `#292725` |
+| Schwarze Karte | `#0B090A`, Text weiß |
+| Farbe | keine. Streng monochrom. |
 
-Streng monochrom. Farbe nur als Marken-Signal.
+- **Schrift:** Inter Display, SemiBold (600) für normalen Text, Bold (700) für Kernwörter und Titel. Laufweite eng (−3,5 %). Liegt in `fonts/` (OFL-Lizenz).
+- **Größen bei 1080 × 1920:** Captions klein 60 px, groß 100 px. Enthülltes Label in der Nahaufnahme ca. 86 px.
+- **Formen:** dünne Linien, Punkte, klare Geometrie. Keine Schatten, keine Verläufe, keine Icons, keine Emojis.
 
-### Typografie
-- **Inter Display** SemiBold (600) für Captions und Labels, Bold (700) für große Wörter und Titel. Liegt in `fonts/` (OFL-Lizenz).
-- Laufweite eng: **−3,5 %** der Schriftgröße.
-- Captions: klein **60 px**, groß **100 px** (bei 1080 × 1920). Zeilen eng gestapelt (Zeilenabstand = 1,0 × größte Schrift der Zeile).
-- Labels in der Nahaufnahme: ca. **86 px**. In der Übersicht ca. 36 px, bei langen Labels automatisch kleiner.
+## 4. Bewegung
 
-### Diagramm (Weltmaße, 1 Einheit = 1 px in der Übersicht)
-- Achteck (Spitze oben), Außenradius **174**. Ringe: dünne Außenlinie (1,0) → heller Spalt → dunkle Füllung ab 0,90 → helle Innenlinie bei 0,80.
-- Speichen starten an den Ecken, Punkt auf Radius **301**, Linie 2, Punkt-Radius 8.
-- Labels stehen immer **aufrecht**, auch während der Rotation. Abstand zum Punkt 40.
-- Hub-Text aufrecht: Kicker klein (22) über Titel groß und fett (42), weiß.
+- **Enthüllung (Signatur):** Der Inhalt steht zuerst als schwarzer Balken in exakter Textbreite da. Dann tippt er sich frei: 0,065 s pro Zeichen, höchstens 0,55 s. Danach blinkt 0,3 s ein dünner Cursor.
+- **Captions:** Jedes Wort blendet in 0,13 s ein (Unschärfe → scharf, leicht größer → normal). Ein Satz baut sich auf und wird vom nächsten hart ersetzt. Position im oberen Drittel, leicht versetzt pro Satz.
+- **Kamera:** Wechsel zum nächsten Punkt in ca. 0,4 s, weich beschleunigt und gebremst, mit Bewegungsunschärfe. Am Ende Rauszoomen in ca. 0,85 s.
+- **Schwarze Karte:** harter Schnitt rein und raus. Zeile 1 klein, Zeile 2 groß. Baut schnell auf (≤ 0,2 s pro Wort) und hält die Pointe mindestens 0,6 s.
+- **Lesetempo ohne Stimme:** höchstens ca. 3,5 Wörter pro Sekunde.
 
-### Kamera
-- **Nahaufnahme:** Zoom **2,4**, Hub-Mitte bei y = **1700** (88 % der Höhe). Die aktive Speiche zeigt nach oben, die Nachbar-Labels werden am Bildrand abgeschnitten. Das ist gewollt und erzeugt Tiefe.
-- **Speichenwechsel:** Rotation um 360°/N (bei 8 Speichen 45°) in **0,38 s**, ease-in-out-cubic, mit Motion Blur (180°-Verschluss).
-- **Erster Zoom** aus dem Intro: 0,42 s, ease-in-out-quart.
-- **Outro:** Zoom zurück in die Übersicht und Rückdrehung, **0,85 s**, ease-out-cubic. Hub-Mitte bei y = 1010.
+## 5. Sound
 
-### Label-Reveal (Signatur-Mechanik)
-1. Vorher: schwarzer Balken in exakter Textbreite (Höhe ca. 1,2 × Versalhöhe).
-2. Start 0,1 s nach Beat-Beginn, also noch während die Kamera fährt.
-3. Buchstaben tippen sich frei, der Restbalken schrumpft (min. 0,5 em breit). **0,065 s pro Zeichen, max. 0,55 s.**
-4. Danach 0,3 s ein dünner Cursor `|`, dann weg.
+| Moment | Sound | earshot-Kit |
+|---|---|---|
+| Durchgehend | Yazans Stimme, ca. 165 Wörter/min, ohne Pausen | – |
+| Enthüllung | leise Tipp-Klicks, Spitzen ca. −19 dBFS | `pro_typing_run/soft` |
+| Schnitt auf Schwarz | Whoosh, Spitze genau am Schnitt | `whoosh_fast/crisp` |
+| Rauszoomen am Ende | tiefer Sub-Drop | `pro_sub_drop/ref` |
 
-### Captions
-- Position: oberes Drittel (Grundlinie y ≈ 520), über dem aktiven Label.
-- Wort für Wort: **0,13 s** Einblendung mit Unschärfe 12 px → 0, Skalierung 1,12 → 1, 8 px Hub.
-- Phrasen bauen sich auf und werden beim nächsten Satz **hart ersetzt**.
-- Klein/groß mischen: Kernwort groß und fett, Füllwörter klein darüber.
-- Leichter horizontaler Versatz pro Phrase (±90 px), damit es lebendig wirkt.
-- Lesetempo: max. ca. 3,5 Wörter/s, sonst warnt der Renderer.
+Ziel-Lautheit −14 LUFS (Referenz: −13,7). Die Klicks bleiben leise, laute Sounds gibt es nur an drei Stellen (zwei Karten, Rauszoomen).
 
-### Schwarze Karten
-- Harter Schnitt rein und raus, kein Übergang (der Whoosh macht den Übergang).
-- Text weiß und zentriert, Zeile 1 klein („Aber dieser Punkt“), Zeile 2 groß („ist für Ärzte Pflicht.“).
-- Baut schnell auf (≤ 0,2 s pro Wort) und hält dann die Pointe mindestens 0,6 s.
-- Logo und Handle unten links (x ≈ 80–104, y ≈ 1176–1250).
-
-### Wasserzeichen und Endkarte
-- Wasserzeichen oben rechts (x 972, y 448), Logo und Handle mit ca. 15 % Deckkraft. In Speiche 1 blitzt das Logo farbig auf.
-- Endkarte: 80 % Abdunklung in 0,08 s. Das Logo poppt (ease-out-back, 0,35 s) über dem Hub auf, der Verlauf läuft ca. 2,2 s und wird dann weiß. Handle 40 px darunter. **3–4 s Halt.**
-
----
-
-## 4. Sound
-
-| Moment | Referenz | Unsere Umsetzung (`formel/sfx.py`) | earshot-Kit (falls freigegeben) |
-|---|---|---|---|
-| Stimme | durchgehend, ca. 165 Wörter/min, praktisch ohne Pausen | Yazans VO, `--vo stimme.wav` | – |
-| Bett | sehr leise unter der Stimme | optional | – |
-| Label tippt | leise Tipp-Klicks pro Reveal | Klick pro Zeichen, Spitzen ca. −19 dBFS | `pro_typing_run/soft` |
-| Schnitt auf Schwarz | Whoosh, Spitze genau am Schnitt | Rausch-Whoosh, links → rechts | `whoosh_fast/crisp` |
-| Rauszoomen | zwei tiefe Hits | Sub-Drop + weicher Whoosh | `pro_sub_drop/ref` |
-| Vor der Endkarte | **0,4 s totale Stille** | identisch | – |
-| Logo | Boom, ca. 1,5 s Ausklang | Boom + leichter Schimmer | `pro_logo_sting/swell_sting` |
-
-- Ziel-Lautheit: **−14 LUFS**, True Peak −1 dB (Referenz: −13,7 LUFS). `sfx.py --vo` normalisiert automatisch.
-- Bewusste Abweichung von der earshot-Regel „3–5 Sounds pro Reel“: Das Tippen bei jedem Reveal ist ein Stilmerkmal. Deshalb bleiben die Klicks leise, und die lauten Sounds sind auf 4 Stellen begrenzt (2 Karten, Outro, Endkarte).
-
----
-
-## 5. Skript-Regeln für Yazans Formel-Reels
+## 6. Skript-Regeln
 
 Zusätzlich zu `ralston-content` (Vertrauen statt Viralität, Zielgruppe Ärzte):
 
-1. **Framework zuerst.** 8 Bausteine, die ein Arzt wirklich speichern will (Checkliste, Prozess, Entscheidungsbaum). Die Engine kann auch 5–10 Speichen.
-2. **Labels:** 1–2 Wörter, max. ca. 17 Zeichen. **Hub:** Kicker (1–2 Wörter) und Titel (max. ca. 14 Zeichen).
-3. **Hook in ≤ 3 s:** Schmerz oder Konsequenz, gern als Imperativ („Unterschreib keine BU, bevor …“).
-4. **Pro Speiche ein Satz**, max. 7 Wörter, das Kernwort *groß*.
-5. **Zwei Karten** als ehrliche Open Loops („Aber dieser Punkt …“, „Und hier entscheidet sich …“). Behauptungen wie „die meisten …“ nur mit Beleg.
-6. **CTA:** speichern und teilen („Screenshot machen“, „Schick's einem Kollegen“). In den ersten 6–12 Monaten kein großer Ask.
+1. **Struktur zuerst.** Was ist das eine Bild? 5–10 Bausteine, die ein Arzt wirklich speichern will.
+2. **Hook in ≤ 3 s:** Schmerz oder Konsequenz, gern als Imperativ („Unterschreib keine BU, bevor …“).
+3. **Pro Punkt ein Satz**, höchstens 7 Wörter, ein Kernwort groß.
+4. **Bezeichnungen kurz:** 1–2 Wörter, höchstens ca. 17 Zeichen.
+5. **Zwei Karten** als ehrliche Open Loops. Behauptungen wie „die meisten …“ nur mit Beleg.
+6. **CTA:** speichern und teilen. In den ersten 6–12 Monaten kein großer Ask.
 7. **Compliance:** keine erfundenen Zahlen, Fälle nur anonymisiert und mit Einwilligung, keine Versicherer herabsetzen. Fachliche Aussagen vor dem Posten prüfen.
-8. **Mit Stimme:** zuerst VO aufnehmen, dann die Beat-Dauern aus den Wortzeiten setzen (Phrasen mit `"at"`, siehe `README.md`).
+8. **Mit Stimme:** zuerst aufnehmen, dann die Beat-Dauern aus den Wortzeiten setzen.
 
-## 6. Was wir bewusst nicht übernehmen
+## 7. Prüffragen vor jedem Reel
 
-- Kein Handle, keine Texte und keine Themen der Referenz. Übernommen werden nur Mechanik und Rhythmus, die Inhalte sind Yazans eigene.
-- Kein Clone-Look auf Dauer: Nach den ersten Reels mit der Multiplikator-Methode messen und den Stil dann eigenständig weiterentwickeln (z. B. Akzentfarbe, eigene Endkarte).
+- Kann ich das Reel in einem Bild zeichnen? Wenn nicht, ist es kein Reel in diesem Stil.
+- Sieht man in den ersten 2 s, wie viel noch verhüllt ist?
+- Wird pro Beat genau eine Sache enthüllt?
+- Stehen die zwei Brüche bei ca. 35 % und 58 %?
+- Würde ich das Schlussbild selbst speichern?
+
+---
+
+# Teil B: Werkzeuge
+
+Ein Werkzeug ist ein zentrales Bild plus Engine, die Teil A umsetzt.
+
+## Werkzeug 1: Oktagon-Diagramm (`formel/`)
+
+**Wofür:** 5–10 gleichrangige Bausteine um ein Thema (Checkliste, Formel, Bestandteile).
+
+- Achteck in der Mitte mit Kicker (klein) und Titel (groß, fett). Von jeder Ecke geht eine Speiche zu einem Punkt, daneben das Label.
+- **Nahaufnahme:** Zoom 2,4, die aktive Speiche zeigt nach oben, die Nachbar-Labels werden am Rand abgeschnitten.
+- **Wechsel:** Das Diagramm dreht sich um eine Speiche weiter (45° bei 8 Speichen, 0,38 s). Die Labels bleiben dabei aufrecht.
+- **Schluss:** Rauszoomen und Zurückdrehen auf die Gesamtübersicht, Überschrift „Screenshot machen“.
+- Weltmaße (1 Einheit = 1 px in der Übersicht): Außenradius 174, Füllung ab 0,90, Innenlinie bei 0,80, Punkt auf Radius 301.
+
+Bedienung: siehe `README.md`.
+
+## Weitere Werkzeuge (noch nicht gebaut)
+
+Gleicher Bauplan, anderes Bild. Kandidaten:
+
+| Bild | Passt für |
+|---|---|
+| **Treppe / Zeitstrahl** | Abläufe mit Reihenfolge (z. B. Schritte von der Assistenzzeit bis zur Niederlassung) |
+| **Zwei Spalten** | Vergleiche (z. B. gesetzlich vs. privat), Zeile für Zeile aufgedeckt |
+| **Stapel / Liste** | Rangfolgen und Prioritäten |
+| **Eine große Zahl** | Rechenwege, bei denen sich die Zahl Schritt für Schritt aufbaut |
+
+Ein neues Werkzeug muss alle sieben Bauprinzipien aus Teil A erfüllen und Look, Bewegung und Sound unverändert übernehmen.
+
+---
+
+## Was wir nicht übernehmen
+
+- Keine Texte und Themen der Referenz. Übernommen werden Bauplan, Look und Rhythmus.
+- Kein Handle, kein Logo, keine Endkarte im Video.

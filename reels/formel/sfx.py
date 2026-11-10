@@ -6,7 +6,7 @@ Sound-Layer für Formel-Reels: synthetisiert die Stil-Sounds aus der Cue-Liste
     python3 reels/formel/sfx.py <video.cues.json> <video.mp4> [ausgabe.mp4] [--vo stimme.wav]
 
 Alles wird im Code erzeugt (nur numpy), keine fremden Aufnahmen.
-Zuordnung zum earshot-Kit, falls dort gerendert wird: siehe reels/STYLE.md, Abschnitt Sound.
+Zuordnung zum earshot-Kit, falls dort gerendert wird: siehe reels/STYLE.md §5.
 """
 import json
 import subprocess
@@ -67,17 +67,6 @@ def sub_drop(dur=1.1, f0=95, f1=36):
     return (np.sin(phase) + 0.18 * np.sin(2 * phase)) * env + click
 
 
-def boom(dur=2.0):
-    n = int(dur * SR)
-    t = np.arange(n) / SR
-    env = np.minimum(1, t / 0.003) * np.exp(-t * 2.3)
-    low = np.sin(2 * np.pi * 52 * t) + 0.35 * np.sin(2 * np.pi * 104 * t)
-    hit = one_pole_lowpass(RNG.standard_normal(n), 900) * np.exp(-t * 40) * 2.5
-    shimmer = sum(np.sin(2 * np.pi * f * t + RNG.uniform(0, 6)) for f in (2093, 2637, 3136, 4186))
-    shimmer = shimmer * np.exp(-t * 3.0) * np.minimum(1, t / 0.08) * 0.05
-    return low * env + hit + shimmer
-
-
 def place(bus, sig, t, gain_db):
     sig = sig if sig.ndim == 2 else np.stack([sig, sig], axis=1)
     i = int(round(t * SR))
@@ -90,7 +79,6 @@ def place(bus, sig, t, gain_db):
 
 def build(cues, duration):
     bus = np.zeros((int((duration + 0.5) * SR), 2))
-    end_t = next((c["t"] for c in cues if c["kind"] == "end"), None)
     for c in cues:
         if c["kind"] == "type":
             step = c["dur"] / max(1, c["chars"])
@@ -101,11 +89,6 @@ def build(cues, duration):
         elif c["kind"] == "outro":
             place(bus, whoosh(0.5, 0.35), c["t"] - 0.05, -15)
             place(bus, sub_drop(), c["t"], -6)
-        elif c["kind"] == "end":
-            place(bus, boom(), c["t"] + 0.04, -4)
-    if end_t is not None:  # 0,4 s echte Stille vor der Endkarte (Stilmerkmal)
-        a, b = int((end_t - 0.4) * SR), int(end_t * SR)
-        bus[a:b] = 0
     return bus[: int(duration * SR)]
 
 
