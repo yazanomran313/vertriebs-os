@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Formel-Reel</title>
+<style>
+  @font-face { font-family: 'ReelDisplay'; src: url('../fonts/InterDisplay-SemiBold.otf') format('opentype'); font-weight: 600; }
+  @font-face { font-family: 'ReelDisplay'; src: url('../fonts/InterDisplay-Bold.otf') format('opentype'); font-weight: 700; }
+  html, body { margin: 0; height: 100%; background: #111; color: #ddd; font: 13px system-ui, sans-serif; }
+  body.preview { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+  body.preview canvas { height: calc(100vh - 56px); width: auto; box-shadow: 0 0 0 1px #333; }
+  #ui { display: flex; align-items: center; gap: 10px; width: min(720px, 96vw); }
+  #ui input { flex: 1; }
+  #ui button { background: #333; color: #eee; border: 0; border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+  #warn { color: #f5a524; max-width: 96vw; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<div id="ui" hidden>
+  <button id="play">▶︎</button>
+  <input id="scrub" type="range" min="0" max="1000" value="0">
+  <span id="time">0.00 s</span>
+</div>
+<div id="warn"></div>
+<script src="../core.js"></script>
+<script>
+'use strict';
+/*
+ * Werkzeug 1: Oktagon-Diagramm (STYLE.md Teil B).
+ * Der Stil selbst (Captions, Enthüllung, Karten, Look) kommt aus ../core.js.
+ */
+
+// Weltmaße: 1 Einheit = 1 px bei Zoom 1 (Übersicht).
+const L = {
+  hubR: 174, fillR: 0.90, innerR: 0.80, dotDist: 301, dotSize: 8, spokeW: 2, ringW: 2.4,
+  labelSize: 36, labelGap: 40, labelMaxClose: 940,
+  closeZoom: 2.4, closeY: 1700, overviewY: 1010, margin: 46,
+  kickerSize: 22, titleSize: 42,
+};
+const TM = { turn: 0.38, firstZoom: 0.42, outroZoom: 0.85, spokeLead: 0.55, introLead: 0.15 };
+const shortestDelta = (from, to) => { let d = (to - from) % 360; if (d > 180) d -= 360; if (d < -180) d += 360; return d; };
+
+function build(spec, ctx, plan) {
+  plan.n = spec.spokes.length;
+  plan.labels = spec.spokes.map(s => ({ text: s, typeStart: Infinity, typeEnd: Infinity }));
+  for (const b of plan.beats) {
+    if (b.type !== 'spoke') continue;
+    const lab = plan.labels[b.spoke];
+    if (!lab) { plan.warnings.push(`Speiche ${b.spoke} existiert nicht.`); continue; }
+    if (lab.typeStart !== Infinity) continue;
+    Object.assign(lab, typeWindow(b.start + TC.typeLead, lab.text));
+    addTypeCue(plan, lab, lab.text);
+  }
+  const outro = plan.beats.find(b => b.type === 'outro');
+  for (const lab of plan.labels) if (lab.typeStart === Infinity && outro) { lab.typeStart = lab.typeEnd = outro.start; }
+  const intro = plan.beats.find(b => b.type === 'intro');
+  plan.introEnd = intro ? intro.end : 0;
+  fitOverview(ctx, plan);
+}
+
+const leadFor = b => (b.type === 'spoke' ? TM.spokeLead : b.type === 'intro' ? TM.introLead : TM.outroZoom + 0.25);
+
+function fitOverview(ctx, plan) {
+  // Zoom so wählen, dass alle Labels in der Übersicht ins Bild passen.
+  const n = plan.n; let need = 1;
+  plan.labelFit = plan.labels.map(l => Math.min(1, L.labelMaxClose / (textW(ctx, l.text, L.labelSize, 600) * L.closeZoom)));
+  for (let i = 0; i < n; i++) {
+    const a = deg(-90 + (i * 360) / n), ux = Math.cos(a), uy = Math.sin(a);
+    const size = L.labelSize * plan.labelFit[i];
+    const w = textW(ctx, plan.labels[i].text, size, 600), h = size * CAP;
+    const off = L.dotDist + L.labelGap + Math.abs(ux) * w / 2 + Math.abs(uy) * h / 2;
+    const ex = Math.abs(ux * off) + w / 2, ey = Math.abs(uy * off) + h / 2;
+    need = Math.min(need, (W / 2 - L.margin) / ex, (H * 0.36) / ey);
+  }
+  plan.ovZoom = need;
+  buildCamera(plan);
+}
+
+function buildCamera(plan) {
+  const segs = []; const n = plan.n;
+  let cur = { z: plan.ovZoom, x: W / 2, y: L.overviewY, r: 0 };
+  for (const b of plan.beats) {
+    if (b.type === 'spoke') {
+      const target = { z: L.closeZoom, x: W / 2, y: L.closeY, r: cur.r + shortestDelta(cur.r, -(b.spoke * 360) / n) };
+      const first = !segs.length;
+      segs.push({ t0: b.start, t1: b.start + (first ? TM.firstZoom : TM.turn), from: { ...cur }, to: target, ease: first ? ease.inOutQuart : ease.inOutCubic });
+      cur = target;
+    } else if (b.type === 'outro') {
+      const target = { z: plan.ovZoom, x: W / 2, y: L.overviewY, r: cur.r + shortestDelta(cur.r, 0) };
+      segs.push({ t0: b.start, t1: b.start + TM.outroZoom, from: { ...cur }, to: target, ease: ease.outCubic });
+      cur = target;
+    }
+  }
+  plan.segments = segs;
+}
+
+function poseAt(plan, t) {
+  if (t < plan.introEnd) {
+    const p = ease.outCubic(clamp(t / 0.7));
+    return { z: plan.ovZoom * (0.45 + 0.55 * p) * (1 + 0.05 * (t / plan.introEnd)), x: W / 2, y: L.overviewY, r: -10 * (1 - ease.outCubic(clamp(t / 1.0))) };
+  }
+  let pose = { z: plan.ovZoom * 1.05, x: W / 2, y: L.overviewY, r: 0 };
+  for (const s of plan.segments) {
+    if (t < s.t0) break;
+    if (t >= s.t1) { pose = s.to; continue; }
+    const p = s.ease(clamp((t - s.t0) / (s.t1 - s.t0)));
+    const from = s === plan.segments[0] && plan.introEnd ? { ...s.from, z: plan.ovZoom * 1.05 } : s.from;
+    return {
+      z: Math.exp(lerp(Math.log(from.z), Math.log(s.to.z), p)),
+      x: lerp(from.x, s.to.x, p), y: lerp(from.y, s.to.y, p), r: lerp(from.r, s.to.r, p),
+    };
+  }
+  return pose;
+}
+
+function polygon(ctx, cx, cy, r, n, rot) {
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const a = deg(-90 + rot + (i * 360) / n);
+    const x = cx + r * Math.cos(a), y = cy + r * Math.sin(a);
+    i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  }
+  ctx.closePath();
+}
+
+function growAt(plan, t, i) {
+  if (t >= plan.introEnd) return 1;
+  return ease.outCubic(clamp((t - 0.05 - i * 0.035) / 0.45));
+}
+
+function drawWorld(ctx, plan, t, pose, grid) {
+  const spec = plan.spec, n = plan.n;
+  ctx.fillStyle = COL.bg; ctx.fillRect(0, 0, W, H); ctx.drawImage(grid, 0, 0);
+  const { z, x: hx, y: hy, r } = pose;
+  const R = L.hubR * z;
+  // Speichen
+  for (let i = 0; i < n; i++) {
+    const g = growAt(plan, t, i); if (g <= 0) continue;
+    const a = deg(-90 + r + (i * 360) / n), ux = Math.cos(a), uy = Math.sin(a);
+    const d = lerp(L.hubR, L.dotDist, g) * z;
+    ctx.strokeStyle = COL.ink; ctx.lineWidth = Math.max(1.5, L.spokeW * z);
+    ctx.beginPath(); ctx.moveTo(hx + ux * R, hy + uy * R); ctx.lineTo(hx + ux * d, hy + uy * d); ctx.stroke();
+    ctx.fillStyle = COL.ink; ctx.beginPath(); ctx.arc(hx + ux * d, hy + uy * d, L.dotSize * z * clamp(g * 1.4 - 0.4), 0, Math.PI * 2); ctx.fill();
+    // Label aufrecht neben dem Punkt
+    const size = L.labelSize * plan.labelFit[i] * z;
+    setFont(ctx, size, 600);
+    const w = ctx.measureText(plan.labels[i].text).width, h = size * CAP;
+    const off = d + L.labelGap * z + Math.abs(ux) * w / 2 + Math.abs(uy) * h / 2;
+    drawTyped(ctx, plan.labels[i].text, plan.labels[i], t, hx + ux * off, hy + uy * off, size, 600, { alpha: clamp(g * 2 - 1) });
+  }
+  // Hub
+  ctx.lineWidth = Math.max(1.5, L.ringW * z); ctx.strokeStyle = COL.hub;
+  polygon(ctx, hx, hy, R, n, r); ctx.fillStyle = COL.bg; ctx.fill(); ctx.stroke();
+  polygon(ctx, hx, hy, R * L.fillR, n, r); ctx.fillStyle = COL.hub; ctx.fill();
+  ctx.lineWidth = Math.max(1, 1.6 * z); ctx.strokeStyle = COL.hubLine;
+  polygon(ctx, hx, hy, R * L.innerR, n, r); ctx.stroke();
+  // Hub-Text (aufrecht)
+  const maxW = 2 * L.hubR * L.innerR * 0.84;
+  const kick = spec.hub.kicker || '', title = spec.hub.title || '';
+  const tFit = Math.min(1, maxW / Math.max(1, textW(ctx, title, L.titleSize, 700)));
+  const kFit = Math.min(1, maxW / Math.max(1, textW(ctx, kick, L.kickerSize, 600)));
+  const ts = L.titleSize * tFit * z, ks = L.kickerSize * kFit * z;
+  ctx.fillStyle = COL.white; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  setFont(ctx, ts, 700); ctx.fillText(title, hx, hy + ts * CAP / 2 + (kick ? 6 * z : 0));
+  if (kick) { setFont(ctx, ks, 600); ctx.fillText(kick, hx, hy - ts * CAP / 2 - 6 * z); }
+}
+
+function motionPx(plan, t, dt) {
+  const p0 = poseAt(plan, t), p1 = poseAt(plan, t + dt);
+  return Math.abs(p1.y - p0.y) + Math.abs(p1.z - p0.z) * L.dotDist * 1.6 + Math.abs(deg(p1.r - p0.r)) * L.dotDist * Math.max(p0.z, p1.z);
+}
+
+createReel({ build, leadFor, motionPx, drawWorld: (ctx, plan, t, grid) => drawWorld(ctx, plan, t, poseAt(plan, t), grid) });
+</script>
+</body>
+</html>
